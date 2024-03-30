@@ -26,6 +26,37 @@ class LetMeShipUtils:
 		self.api_password = api_password
 		self.api_id = api_id
 
+	def request(
+		self,
+		method: str,
+		endpoint: str,
+		json: dict | None = None,
+		params: dict | None = None
+	):
+		"""Make a request to LetMeShip API."""
+		response = requests.request(
+			method,
+			f"{self.base_url}/{endpoint}",
+			auth=(self.api_id, self.api_password),
+			headers={
+				"Content-Type": "application/json",
+				"Accept": "application/json",
+				"Access-Control-Allow-Origin": "string",
+			},
+			params=params,
+			json=json,
+		)
+
+		data = response.json()
+		if "status" in data and data["status"]["code"] != "0":
+			frappe.throw(
+				_("An Error occurred while fetching LetMeShip {0}:\n{1}").format(
+					endpoint, json.dumps(data["status"], indent=4)
+				)
+			)
+
+		return data
+
 	def get_available_services(
 		self,
 		delivery_to_type,
@@ -42,13 +73,6 @@ class LetMeShipUtils:
 		pickup_address.address_title = self.first_30_chars(pickup_address.address_title)
 		delivery_address.address_title = self.first_30_chars(delivery_address.address_title)
 		parcel_list = self.get_parcel_list(parcels, description_of_content)
-
-		url = f"{self.base_url}/available"
-		headers = {
-			"Content-Type": "application/json",
-			"Accept": "application/json",
-			"Access-Control-Allow-Origin": "string",
-		}
 		payload = self.generate_payload(
 			pickup_address=pickup_address,
 			pickup_contact=pickup_contact,
@@ -59,17 +83,9 @@ class LetMeShipUtils:
 			parcel_list=parcel_list,
 			pickup_date=pickup_date,
 		)
+
 		try:
-			response_data = requests.post(
-				url=url, auth=(self.api_id, self.api_password), headers=headers, data=json.dumps(payload)
-			)
-			response_data = json.loads(response_data.text)
-			if "status" in response_data and response_data["status"]["code"] != "0":
-				frappe.throw(
-					_("An Error occurred while fetching LetMeShip prices:\n{0}").format(
-						json.dumps(response_data["status"], indent=4)
-					)
-				)
+			response_data = self.request("POST", "available", json=payload)
 			if "serviceList" in response_data and response_data["serviceList"]:
 				available_services = []
 				for response in response_data["serviceList"]:
@@ -119,23 +135,13 @@ class LetMeShipUtils:
 			pickup_date=pickup_date,
 			service_info=service_info,
 		)
-		try:
-			response_data = requests.post(
-				url=url, auth=(self.api_id, self.api_password), headers=headers, data=json.dumps(payload)
-			)
-			response_data = json.loads(response_data.text)
-			if "status" in response_data and response_data["status"]["code"] != "0":
-				frappe.throw(_("An Error occurred while fetching LetMeShip prices:\n{0}").format(
-					json.dumps(response_data["status"], indent=4)
-				)
-			)
+		try:				
+			response_data = self.request("POST", "shipments", json=payload)
 			if "shipmentId" in response_data:
 				shipment_amount = response_data["service"]["baseServiceDetails"]["priceInfo"]["totalPrice"]
-				awb_number = ""
 				shipment_id = response_data["shipmentId"]
-				url = f"{self.base_url}/shipments/{shipment_id}"
-				tracking_response = requests.get(url, auth=(self.api_id, self.api_password), headers=headers)
-				tracking_response_data = json.loads(tracking_response.text)
+				tracking_response_data = self.request("GET", f"shipments/{shipment_id}")
+				awb_number = ""
 				if "trackingData" in tracking_response_data:
 					awb_number = tracking_response_data["trackingData"].get("awbNumber")
 
@@ -151,18 +157,8 @@ class LetMeShipUtils:
 			show_error_alert("creating LetMeShip Shipment")
 
 	def get_label(self, shipment_id):
-		# Retrieve shipment label from LetMeShip
 		try:
-			headers = {
-				"Content-Type": "application/json",
-				"Accept": "application/json",
-				"Access-Control-Allow-Origin": "string",
-			}
-			url = f"{self.base_url}/shipments/{shipment_id}/documents?types=LABEL"
-			shipment_label_response = requests.get(
-				url, auth=(self.api_id, self.api_password), headers=headers
-			)
-			shipment_label_response_data = json.loads(shipment_label_response.text)
+			shipment_label_response_data = self.request("GET", f"shipments/{shipment_id}/documents", params={"types": "LABEL"})
 			if "documents" in shipment_label_response_data:
 				for label in shipment_label_response_data["documents"]:
 					if "data" in label:
@@ -179,16 +175,9 @@ class LetMeShipUtils:
 	def get_tracking_data(self, shipment_id):
 		from erpnext_shipping.erpnext_shipping.utils import get_tracking_url
 
-		# return letmeship tracking data
-		headers = {
-			"Content-Type": "application/json",
-			"Accept": "application/json",
-			"Access-Control-Allow-Origin": "string",
-		}
 		try:
-			url = f"{self.base_url}/tracking?shipmentid={shipment_id}"
-			tracking_data_response = requests.get(url, auth=(self.api_id, self.api_password), headers=headers)
-			tracking_data = json.loads(tracking_data_response.text)
+			tracking_data = self.request("GET", "tracking", params={"shipmentid": shipment_id})
+
 			if "awbNumber" in tracking_data:
 				tracking_status = "In Progress"
 				if tracking_data["lmsTrackingStatus"].startswith("DELIVERED"):
