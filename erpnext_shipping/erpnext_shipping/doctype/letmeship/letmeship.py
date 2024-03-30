@@ -137,9 +137,8 @@ class LetMeShipUtils:
 				tracking_response = requests.get(url, auth=(self.api_id, self.api_password), headers=headers)
 				tracking_response_data = json.loads(tracking_response.text)
 				if "trackingData" in tracking_response_data:
-					for parcel in tracking_response_data["trackingData"]["parcelList"]:
-						if "awbNumber" in parcel:
-							awb_number = parcel["awbNumber"]
+					awb_number = tracking_response_data["trackingData"].get("awbNumber")
+
 				return {
 					"service_provider": LETMESHIP_PROVIDER,
 					"shipment_id": response_data["shipmentId"],
