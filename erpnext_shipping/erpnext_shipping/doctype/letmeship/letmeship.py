@@ -118,12 +118,6 @@ class LetMeShipUtils:
 		)
 		parcel_list = self.get_parcel_list(json.loads(shipment_parcel), description_of_content)
 
-		url = f"{self.base_url}/shipments"
-		headers = {
-			"Content-Type": "application/json",
-			"Accept": "application/json",
-			"Access-Control-Allow-Origin": "string",
-		}
 		payload = self.generate_payload(
 			pickup_address=pickup_address,
 			pickup_contact=pickup_contact,
