@@ -134,6 +134,7 @@ function select_from_available_services(frm, available_services) {
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Select Service to Create Shipment"),
+		size: "extra-large",
 		fields: [
 			{
 				fieldtype:'HTML',
