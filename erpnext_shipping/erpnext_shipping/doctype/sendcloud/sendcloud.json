@@ -7,8 +7,7 @@
  "field_order": [
   "enabled",
   "api_key",
-  "api_secret",
-  "information"
+  "api_secret"
  ],
  "fields": [
   {
@@ -21,24 +20,19 @@
    "fieldname": "api_key",
    "fieldtype": "Data",
    "label": "API Key",
-   "read_only_depends_on": "eval:doc.enabled == 0"
+   "mandatory_depends_on": "enabled"
   },
   {
    "fieldname": "api_secret",
    "fieldtype": "Password",
    "label": "API Secret",
-   "read_only_depends_on": "eval:doc.enabled == 0"
-  },
-  {
-   "fieldname": "information",
-   "fieldtype": "HTML",
-   "options": "<div><span class=\"text-medium text-muted\">For steps to generate the API key, click <a href=\"https://support.sendcloud.com/hc/en-us/articles/360024967012-API-documentation#1\" target=\"_blank\">here</a></span></div>"
+   "mandatory_depends_on": "enabled"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2020-12-16 15:33:49.486409",
+ "modified": "2024-04-22 17:43:51.711897",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "SendCloud",
@@ -58,5 +52,6 @@
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
