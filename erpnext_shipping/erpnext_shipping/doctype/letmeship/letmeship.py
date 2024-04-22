@@ -136,21 +136,24 @@ class LetMeShipUtils:
 			if "shipmentId" in response_data:
 				shipment_amount = response_data["service"]["baseServiceDetails"]["priceInfo"]["totalPrice"]
 				shipment_id = response_data["shipmentId"]
-				tracking_response_data = self.request("GET", f"shipments/{shipment_id}")
-				awb_number = ""
-				if "trackingData" in tracking_response_data:
-					awb_number = tracking_response_data["trackingData"].get("awbNumber")
 
 				return {
 					"service_provider": LETMESHIP_PROVIDER,
-					"shipment_id": response_data["shipmentId"],
+					"shipment_id": shipment_id,
 					"carrier": response_data["service"]["baseServiceDetails"]["carrier"],
 					"carrier_service": response_data["service"]["baseServiceDetails"]["name"],
 					"shipment_amount": shipment_amount,
-					"awb_number": awb_number,
+					"awb_number": self.get_awb_number(shipment_id),
 				}
 		except Exception:
 			show_error_alert("creating LetMeShip Shipment")
+
+	def get_awb_number(self, shipment_id: str):
+		shipment_data = self.request("GET", f"shipments/{shipment_id}")
+		if "trackingData" in shipment_data:
+			return shipment_data["trackingData"].get("awbNumber", "")
+
+		return ""
 
 	def get_label(self, shipment_id):
 		try:
