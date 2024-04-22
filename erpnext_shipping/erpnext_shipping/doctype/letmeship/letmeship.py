@@ -3,12 +3,14 @@
 
 import json
 import re
+from json import dumps as json_dumps
 
 import frappe
 import requests
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils.data import get_link_to_form
+
 from erpnext_shipping.erpnext_shipping.utils import show_error_alert
 
 LETMESHIP_PROVIDER = "LetMeShip"
@@ -51,7 +53,7 @@ class LetMeShipUtils:
 		if "status" in data and data["status"]["code"] != "0":
 			frappe.throw(
 				_("An Error occurred while fetching LetMeShip {0}:\n{1}").format(
-					endpoint, json.dumps(data["status"], indent=4)
+					endpoint, json_dumps(data["status"], indent=4)
 				)
 			)
 
