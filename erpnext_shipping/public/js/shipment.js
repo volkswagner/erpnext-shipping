@@ -31,6 +31,11 @@ frappe.ui.form.on('Shipment', {
 	},
 
 	fetch_shipping_rates: function(frm) {
+		if (frappe.session.user === "Administrator") {
+			frappe.show_alert(__("Please log in as a regular user to use the shipping integration."));
+			return;
+		}
+
 		if (!frm.doc.shipment_id) {
 			frappe.call({
 				method: "erpnext_shipping.erpnext_shipping.shipping.fetch_shipping_rates",
