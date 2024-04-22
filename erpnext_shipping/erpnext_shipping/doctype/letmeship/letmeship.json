@@ -8,8 +8,7 @@
   "enabled",
   "use_test_environment",
   "api_id",
-  "api_password",
-  "information"
+  "api_password"
  ],
  "fields": [
   {
@@ -31,11 +30,6 @@
    "mandatory_depends_on": "enabled"
   },
   {
-   "fieldname": "information",
-   "fieldtype": "HTML",
-   "options": "<div><span class=\"text-medium text-muted\">For steps to generate the API ID, click <a href=\"https://www.letmeship.com/en-at/connect-the-shipping-interface/\" target=\"_blank\">here</a></span></div>"
-  },
-  {
    "default": "0",
    "fieldname": "use_test_environment",
    "fieldtype": "Check",
@@ -44,7 +38,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2024-03-08 13:17:25.011707",
+ "modified": "2024-04-22 17:42:04.777538",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "LetMeShip",
