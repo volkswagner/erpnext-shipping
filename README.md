@@ -3,6 +3,10 @@
 A Shipping Integration for ERPNext with various platforms. Platforms integrated in this app are:
 
 - [LetMeShip](https://www.letmeship.com/en/)
+
+    > [!NOTE]
+    > Please make sure to get your API access enabled first, by contacting the LetMeShip support.
+
 - [SendCloud](https://www.sendcloud.com/home-new/)
 
 ## Features
