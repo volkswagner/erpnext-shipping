@@ -28,13 +28,7 @@ class LetMeShipUtils:
 		self.api_password = api_password
 		self.api_id = api_id
 
-	def request(
-		self,
-		method: str,
-		endpoint: str,
-		json: dict | None = None,
-		params: dict | None = None
-	):
+	def request(self, method: str, endpoint: str, json: dict | None = None, params: dict | None = None):
 		"""Make a request to LetMeShip API."""
 		response = requests.request(
 			method,
@@ -131,7 +125,7 @@ class LetMeShipUtils:
 			pickup_date=pickup_date,
 			service_info=service_info,
 		)
-		try:				
+		try:
 			response_data = self.request("POST", "shipments", json=payload)
 			if "shipmentId" in response_data:
 				shipment_amount = response_data["service"]["baseServiceDetails"]["priceInfo"]["totalPrice"]
@@ -157,7 +151,9 @@ class LetMeShipUtils:
 
 	def get_label(self, shipment_id):
 		try:
-			shipment_label_response_data = self.request("GET", f"shipments/{shipment_id}/documents", params={"types": "LABEL"})
+			shipment_label_response_data = self.request(
+				"GET", f"shipments/{shipment_id}/documents", params={"types": "LABEL"}
+			)
 			if "documents" in shipment_label_response_data:
 				for label in shipment_label_response_data["documents"]:
 					if "data" in label:
@@ -337,5 +333,5 @@ def get_letmeship_utils() -> "LetMeShipUtils":
 	return LetMeShipUtils(
 		base_url=TEST_BASE_URL if settings.use_test_environment else PROD_BASE_URL,
 		api_id=settings.api_id,
-		api_password=settings.get_password("api_password")
+		api_password=settings.get_password("api_password"),
 	)

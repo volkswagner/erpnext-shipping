@@ -5,7 +5,10 @@ import json
 import frappe
 from erpnext.stock.doctype.shipment.shipment import get_company_contact
 
-from erpnext_shipping.erpnext_shipping.doctype.letmeship.letmeship import LETMESHIP_PROVIDER, get_letmeship_utils
+from erpnext_shipping.erpnext_shipping.doctype.letmeship.letmeship import (
+	LETMESHIP_PROVIDER,
+	get_letmeship_utils,
+)
 from erpnext_shipping.erpnext_shipping.doctype.sendcloud.sendcloud import SENDCLOUD_PROVIDER, SendCloudUtils
 from erpnext_shipping.erpnext_shipping.utils import (
 	get_address,
@@ -71,10 +74,7 @@ def fetch_shipping_rates(
 	if sendcloud_enabled and pickup_from_type == "Company":
 		sendcloud = SendCloudUtils()
 		sendcloud_prices = (
-			sendcloud.get_available_services(
-				delivery_address=delivery_address, parcels=parcels
-			)
-			or []
+			sendcloud.get_available_services(delivery_address=delivery_address, parcels=parcels) or []
 		)
 		sendcloud_prices = match_parcel_service_type_carrier(sendcloud_prices, "carrier", "service_name")
 		shipment_prices += sendcloud_prices

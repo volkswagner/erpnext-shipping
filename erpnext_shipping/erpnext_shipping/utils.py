@@ -69,13 +69,17 @@ def get_contact(contact_name):
 	return contact
 
 
-def match_parcel_service_type_carrier(shipment_prices: list[dict], carrier_fieldname: str, service_fieldname: str):
+def match_parcel_service_type_carrier(
+	shipment_prices: list[dict], carrier_fieldname: str, service_fieldname: str
+):
 	from erpnext_shipping.erpnext_shipping.doctype.parcel_service_type.parcel_service_type import (
 		match_parcel_service_type_alias,
 	)
 
 	for idx, prices in enumerate(shipment_prices):
-		service_name = match_parcel_service_type_alias(prices.get(carrier_fieldname), prices.get(service_fieldname))
+		service_name = match_parcel_service_type_alias(
+			prices.get(carrier_fieldname), prices.get(service_fieldname)
+		)
 		is_preferred = frappe.db.get_value(
 			"Parcel Service Type", service_name, "show_in_preferred_services_list"
 		)
@@ -89,9 +93,7 @@ def show_error_alert(action):
 	log = frappe.log_error(title="Shipping Error")
 	link_to_log = get_link_to_form("Error Log", log.name, "See what happened.")
 	frappe.msgprint(
-		msg=_("An Error occurred while {0}. {1}").format(action, link_to_log),
-		indicator="orange",
-		alert=True
+		msg=_("An Error occurred while {0}. {1}").format(action, link_to_log), indicator="orange", alert=True
 	)
 
 

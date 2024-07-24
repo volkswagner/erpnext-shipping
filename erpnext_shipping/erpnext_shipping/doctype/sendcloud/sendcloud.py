@@ -17,6 +17,7 @@ SENDCLOUD_PROVIDER = "SendCloud"
 WEIGHT_DECIMALS = 3
 CURRENCY_DECIMALS = 2
 
+
 class SendCloud(Document):
 	pass
 
@@ -55,16 +56,10 @@ class SendCloudUtils:
 
 			available_services = []
 			for service in responses_dict.get("shipping_methods", []):
-				countries = [
-					country
-					for country in service["countries"]
-					if country["iso_2"] == to_country
-				]
+				countries = [country for country in service["countries"] if country["iso_2"] == to_country]
 
 				if countries and check_weight(service, parcels):
-					available_service = self.get_service_dict(
-						service, countries[0], parcels
-					)
+					available_service = self.get_service_dict(service, countries[0], parcels)
 					available_services.append(available_service)
 
 			return available_services
@@ -266,6 +261,5 @@ def check_weight(service: dict, parcels: list[dict]) -> bool:
 	max_weight_kg = float(service["max_weight"])
 	min_weight_kg = float(service["min_weight"])
 	return any(
-		max_weight_kg > parcel.get("weight") and min_weight_kg <= parcel.get("weight")
-		for parcel in parcels
+		max_weight_kg > parcel.get("weight") and min_weight_kg <= parcel.get("weight") for parcel in parcels
 	)
