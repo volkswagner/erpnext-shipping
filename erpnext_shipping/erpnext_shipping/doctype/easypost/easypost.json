@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-08-07 08:52:35.712745",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "use_test_environment",
+  "test_key",
+  "production_key"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_test_environment",
+   "fieldtype": "Check",
+   "label": "Use Test Environment"
+  },
+  {
+   "fieldname": "test_key",
+   "fieldtype": "Data",
+   "label": "Test API Key",
+   "mandatory_depends_on": "enabled"
+  },
+  {
+   "fieldname": "production_key",
+   "fieldtype": "Data",
+   "label": "Production API Key",
+   "mandatory_depends_on": "enabled"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-08-07 09:02:25.570656",
+ "modified_by": "Administrator",
+ "module": "ERPNext Shipping",
+ "name": "EasyPost",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
