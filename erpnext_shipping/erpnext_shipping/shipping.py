@@ -152,17 +152,18 @@ def create_shipment(
 		)
 
 	if shipment_info:
-		fields = [
-			"service_provider",
-			"carrier",
-			"carrier_service",
-			"shipment_id",
-			"shipment_amount",
-			"awb_number",
-		]
-		for field in fields:
-			frappe.db.set_value("Shipment", shipment, field, shipment_info.get(field))
-		frappe.db.set_value("Shipment", shipment, "status", "Booked")
+		shipment = frappe.get_doc("Shipment", shipment)
+		shipment.db_set(
+			{
+				"service_provider": shipment_info.get("service_provider"),
+				"carrier": shipment_info.get("carrier"),
+				"carrier_service": shipment_info.get("carrier_service"),
+				"shipment_id": shipment_info.get("shipment_id"),
+				"shipment_amount": shipment_info.get("shipment_amount"),
+				"awb_number": shipment_info.get("awb_number"),
+				"status": "Booked",
+			}
+		)
 
 		if delivery_notes:
 			update_delivery_note(delivery_notes=delivery_notes, shipment_info=shipment_info)
@@ -232,13 +233,21 @@ def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None
 		sendcloud = SendCloudUtils()
 		tracking_data = sendcloud.get_tracking_data(shipment_id)
 
-	if tracking_data:
-		fields = ["awb_number", "tracking_status", "tracking_status_info", "tracking_url"]
-		for field in fields:
-			frappe.db.set_value("Shipment", shipment, field, tracking_data.get(field))
+	if not tracking_data:
+		return
 
-		if delivery_notes:
-			update_delivery_note(delivery_notes=delivery_notes, tracking_info=tracking_data)
+	shipment = frappe.get_doc("Shipment", shipment)
+	shipment.db_set(
+		{
+			"awb_number": tracking_data.get("awb_number"),
+			"tracking_status": tracking_data.get("tracking_status"),
+			"tracking_status_info": tracking_data.get("tracking_status_info"),
+			"tracking_url": tracking_data.get("tracking_url"),
+		}
+	)
+
+	if delivery_notes:
+		update_delivery_note(delivery_notes=delivery_notes, tracking_info=tracking_data)
 
 
 def update_delivery_note(delivery_notes, shipment_info=None, tracking_info=None):
