@@ -1,4 +1,3 @@
-# this is a comment
 from frappe import _
 
 
