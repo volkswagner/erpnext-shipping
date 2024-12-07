@@ -105,6 +105,7 @@ def fetch_shipping_rates(
 				shipment_parcel=parcels,
 				pickup_address=pickup_address,
 				pickup_contact=pickup_contact,
+				value_of_goods=value_of_goods
 			)
 			or []
 		)

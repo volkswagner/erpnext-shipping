@@ -29,7 +29,14 @@ class EasyPostUtils():
 			link = get_link_to_form("EasyPost", "EasyPost", _("EasyPost Settings"))
 			frappe.throw(_("Please enable EasyPost Integration in {0}").format(link))
 
-	def get_available_services(self, delivery_address, delivery_contact, shipment_parcel, pickup_address, pickup_contact):
+	def get_available_services(self,
+		delivery_address,
+		delivery_contact,
+		shipment_parcel,
+		pickup_address,
+		pickup_contact,
+		value_of_goods
+	):
 		# Retrieve rates at EasyPost from specification stated.
 		if not self.enabled or not self.api_key:
 			return []
@@ -87,7 +94,7 @@ class EasyPostUtils():
 			available_services = []
 			# store the rates to display to user
 			for service in response_dict.get("rates", []):
-				available_service = self.get_service_dict(service) # standardize the format of the rate details
+				available_service = self.get_service_dict(service, flt(shipment_parcel[0]['count']), flt(value_of_goods)) # standardize the format of the rate details
 				available_services.append(available_service)
 
 			return available_services
@@ -151,13 +158,13 @@ class EasyPostUtils():
 		except Exception:
 			show_error_alert("updating EasyPost Shipment")
 
-	def get_service_dict(self, service):
+	def get_service_dict(self, service, parcel_count, shipment_value):
 		"""Returns a dictionary with service info."""
 		available_service = frappe._dict()
 		available_service.service_provider = 'EasyPost'
 		available_service.carrier = self.get_carrier(service['carrier'], post_or_get="get")
 		available_service.service_name = service['service']
-		available_service.total_price = service['rate']
+		available_service.total_price = (flt(service['rate']) * parcel_count) + shipment_value
 		available_service.service_id = service['id']
 		return available_service
 
