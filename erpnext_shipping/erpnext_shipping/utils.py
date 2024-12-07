@@ -25,6 +25,7 @@ def get_address(address_name):
 			"city",
 			"pincode",
 			"country",
+			"state"
 		],
 		as_dict=1,
 	)

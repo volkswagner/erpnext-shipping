@@ -140,6 +140,7 @@ frappe.ui.form.on("Shipment", {
 });
 
 function select_from_available_services(frm, available_services) {
+	console.log(available_services)
 	const arranged_services = available_services.reduce(
 		(prev, curr) => {
 			if (curr.is_preferred) {
@@ -183,7 +184,7 @@ function select_from_available_services(frm, available_services) {
 		frm.select_row(service_data);
 	});
 
-	frm.select_row = function (service_data) {
+	frm.select_row = function (service_data) {c
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.create_shipment",
 			freeze: true,

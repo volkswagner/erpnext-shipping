@@ -16,6 +16,8 @@ from erpnext_shipping.erpnext_shipping.utils import (
 	match_parcel_service_type_carrier,
 )
 
+from erpnext_shipping.erpnext_shipping.doctype.easypost.easypost import EASYPOST_PROVIDER, EasyPostUtils
+
 
 @frappe.whitelist()
 def fetch_shipping_rates(
@@ -34,6 +36,7 @@ def fetch_shipping_rates(
 	shipment_prices = []
 	letmeship_enabled = frappe.db.get_single_value("LetMeShip", "enabled")
 	sendcloud_enabled = frappe.db.get_single_value("SendCloud", "enabled")
+	easypost_enabled = frappe.db.get_single_value("EasyPost", "enabled")
 	pickup_address = get_address(pickup_address_name)
 	delivery_address = get_address(delivery_address_name)
 	parcels = json.loads(parcels)
@@ -78,6 +81,34 @@ def fetch_shipping_rates(
 		)
 		sendcloud_prices = match_parcel_service_type_carrier(sendcloud_prices, "carrier", "service_name")
 		shipment_prices += sendcloud_prices
+
+	if easypost_enabled:
+		pickup_contact = None
+		delivery_contact = None
+		if pickup_from_type != "Company":
+			pickup_contact = get_contact(pickup_contact_name)
+		else:
+			pickup_contact = get_company_contact(user=pickup_contact_name)
+			pickup_contact.email_id = pickup_contact.pop("email", None)
+
+		if delivery_to_type != "Company":
+			delivery_contact = get_contact(delivery_contact_name)
+		else:
+			delivery_contact = get_company_contact(user=pickup_contact_name)
+			delivery_contact.email_id = delivery_contact.pop("email", None)
+
+		easypost = EasyPostUtils()
+		easypost_prices = (
+			easypost.get_available_services(
+				delivery_address=delivery_address,
+				delivery_contact=delivery_contact,
+				shipment_parcel=parcels,
+				pickup_address=pickup_address,
+				pickup_contact=pickup_contact,
+			)
+			or []
+		)
+		shipment_prices += easypost_prices
 
 	shipment_prices = sorted(shipment_prices, key=lambda k: k["total_price"])
 	return shipment_prices
