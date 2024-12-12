@@ -8,7 +8,8 @@
   "enabled",
   "use_test_environment",
   "test_key",
-  "production_key"
+  "production_key",
+  "label_format"
  ],
  "fields": [
   {
@@ -34,12 +35,19 @@
    "fieldtype": "Data",
    "label": "Production API Key",
    "mandatory_depends_on": "enabled"
+  },
+  {
+   "default": "PNG",
+   "fieldname": "label_format",
+   "fieldtype": "Select",
+   "label": "Label Format",
+   "options": "PNG\nPDF\nZPL"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-08-07 09:02:25.570656",
+ "modified": "2024-12-12 10:56:20.126923",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "EasyPost",

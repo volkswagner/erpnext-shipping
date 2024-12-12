@@ -109,8 +109,6 @@ def fetch_shipping_rates(
 			)
 			or []
 		)
-#eric added the following line but does not seem to make a difference
-		easypost_prices = match_parcel_service_type_carrier(easypost_prices, "carrier", "service_name")
 		shipment_prices += easypost_prices
 
 	shipment_prices = sorted(shipment_prices, key=lambda k: k["total_price"])
@@ -185,12 +183,6 @@ def create_shipment(
 			service_info=service_info,
 		)
 
-	if service_info["service_provider"] == EASYPOST_PROVIDER:
-		easypost = EasyPostUtils()
-		shipment_info = easypost.create_shipment(
-			service_info=service_info,
-		)
-
 	if shipment_info:
 		shipment = frappe.get_doc("Shipment", shipment)
 		shipment.db_set(
@@ -240,9 +232,6 @@ def print_shipping_label(shipment: str):
 			content = sendcloud.download_label(label_url)
 			file_url = save_label_as_attachment(shipment, content)
 			shipping_label.append(file_url)
-	elif service_provider == EASYPOST_PROVIDER:
-		easypost = EasyPostUtils()
-		shipping_label = easypost.get_label(shipment_id)
 
 	return shipping_label
 

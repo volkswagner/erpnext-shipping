@@ -184,7 +184,8 @@ function select_from_available_services(frm, available_services) {
 		frm.select_row(service_data);
 	});
 
-	frm.select_row = function (service_data) {c
+	frm.select_row = function (service_data) {
+		console.log(service_data)
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.create_shipment",
 			freeze: true,

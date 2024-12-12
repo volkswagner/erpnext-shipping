@@ -18,14 +18,12 @@ EASYPOST_PROVIDER = "EasyPost"
 class EasyPost(Document):
 	pass
 
+
 class EasyPostUtils():
 	def __init__(self):
 		settings = frappe.get_single("EasyPost")
-		# toggle between the test and production keys
-		# self.api_key = settings.test_key if settings.use_test_environment else settings.production_key 
-		self.api_key = settings.test_key
+		self.api_key = settings.test_key if settings.use_test_environment else settings.production_key # toggle between the test and production keys
 		self.enabled = settings.enabled
-		self.label_format = settings.label_format
 
 		if not self.enabled: # show dialog to prompt user to enable the service provicer
 			link = get_link_to_form("EasyPost", "EasyPost", _("EasyPost Settings"))
@@ -96,25 +94,19 @@ class EasyPostUtils():
 			available_services = []
 			# store the rates to display to user
 			for service in response_dict.get("rates", []):
-				available_service = self.get_service_dict(service, flt(shipment_parcel[0]['count']), response_dict.get("id")) # standardize the format of the rate details
+				available_service = self.get_service_dict(service, flt(shipment_parcel[0]['count']), flt(value_of_goods)) # standardize the format of the rate details
 				available_services.append(available_service)
 
 			return available_services
 		except Exception:
 			show_error_alert("fetching EasyPost prices")
 
-	def create_shipment(self, service_info):
+	def create_shipment(self, shipment):
 		# Create a transaction at EasyPost
-
-		rate = {
-			"rate": {
-				"id": service_info['service_id']
-			}
-		}
 		if not self.enabled or not self.api_key:
 			return []
 		try:
-			response = requests.post('https://api.easypost.com/v2/shipments/{id}/buy'.format(id=service_info['shipment_id']), auth=(self.api_key, ""), json=rate)
+			response = requests.post('https://api.easypost.com/v2/shipments/{id}/buy'.format(id=shipment), auth=(self.api_key, ""))
 
 			response_data = response.json()
 			if 'failed_parcels' in response_data:
@@ -124,25 +116,23 @@ class EasyPostUtils():
 			else:
 				return {
 					'service_provider': 'EasyPost',
-					'shipment_id': service_info['shipment_id'],
+					'shipment_id': response_data['id'],
 					'carrier': self.get_carrier(service_info['carrier'], post_or_get="post"),
 					'carrier_service': service_info['service_name'],
 					'shipment_amount': service_info['total_price'],
-					'awb_number': response_data['tracker']['tracking_code']
+					'awb_number': response_data['tracking_code']
 				}
-
 		except Exception:
 			show_error_alert("creating EasyPost Shipment")
 
 	def get_label(self, shipment_id):
 		# Retrieve shipment label from EasyPost
-		label_format_lower = '' if self.label_format == 'PNG' else self.label_format.lower() + '_'
 		label_url = ""
 
 		try:
-			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format=PDF'.format(id=shipment_id), auth=(self.api_key, ""))
-			shipment_label = shipment_label_response.json()
-			label_url = shipment_label['postage_label']['label_{lab_form_low}url'.format(lab_form_low=label_format_lower)]
+			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}'.format(id=shipment_id), auth=(self.api_key, ""))
+			shipment_label = json.loads(shipment_label_response.text)
+			label_url = shipment_label['postage_label']['label_url']
 
 			if label_url:
 				return label_url
@@ -168,16 +158,14 @@ class EasyPostUtils():
 		except Exception:
 			show_error_alert("updating EasyPost Shipment")
 
-	def get_service_dict(self, service, parcel_count, shipment_id):
+	def get_service_dict(self, service, parcel_count, shipment_value):
 		"""Returns a dictionary with service info."""
 		available_service = frappe._dict()
 		available_service.service_provider = 'EasyPost'
 		available_service.carrier = self.get_carrier(service['carrier'], post_or_get="get")
 		available_service.service_name = service['service']
-		#eric changing line below, removing "+ shipment_value" as this shipment value should not be added to the shipping rate
-		available_service.total_price = (flt(service['rate']) * parcel_count)
+		available_service.total_price = (flt(service['rate']) * parcel_count) + shipment_value
 		available_service.service_id = service['id']
-		available_service.shipment_id = shipment_id
 		return available_service
 
 	def get_carrier(self, carrier_name, post_or_get=None):
