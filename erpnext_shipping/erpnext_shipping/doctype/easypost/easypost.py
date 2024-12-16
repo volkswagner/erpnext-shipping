@@ -136,21 +136,21 @@ class EasyPostUtils():
 
 	def get_label(self, shipment_id):
 		# Retrieve shipment label from EasyPost
-		label_format_lower = '' if self.label_format == 'PNG' else self.label_format.lower() + '_'
 		label_url = ""
+		key_format = "" if self.label_format == "png" else self.label_format + "_"
 
 		try:
-			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format=PDF'.format(id=shipment_id), auth=(self.api_key, ""))
+			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format={format}'.format(id=shipment_id, format=self.label_format), auth=(self.api_key, ""))
 			shipment_label = shipment_label_response.json()
-			label_url = shipment_label['postage_label']['label_{lab_form_low}url'.format(lab_form_low=label_format_lower)]
+			label_url = shipment_label['postage_label']['label_{format}url'.format(format=key_format)]
 
 			if label_url:
 				return label_url
 			else:
-				message = _("Please make sure Shipment (ID: {0}), exists and is a complete Shipment on SendCloud.").format(shipment_id)
+				message = _("Please make sure Shipment (ID: {0}), exists and is a complete Shipment on EasyPost.").format(shipment_id)
 				frappe.msgprint(msg=_(message), title=_("Label Not Found"))
 		except Exception:
-			show_error_alert("printing SendCloud Label")
+			show_error_alert("printing EasyPost Label")
 
 	def get_tracking_data(self, shipment_id):
 		# return EasyPost tracking data

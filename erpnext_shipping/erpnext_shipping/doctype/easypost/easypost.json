@@ -9,7 +9,8 @@
   "use_test_environment",
   "test_key",
   "production_key",
-  "label_format"
+  "label_format",
+  "label_to_print"
  ],
  "fields": [
   {
@@ -37,17 +38,23 @@
    "mandatory_depends_on": "enabled"
   },
   {
-   "default": "PNG",
+   "default": "png",
    "fieldname": "label_format",
    "fieldtype": "Select",
    "label": "Label Format",
-   "options": "PNG\nPDF\nZPL"
+   "options": "png\npdf\nzpl"
+  },
+  {
+   "fieldname": "label_to_print",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Label to Print"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-12 10:56:20.126923",
+ "modified": "2024-12-15 05:22:32.183277",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "EasyPost",
