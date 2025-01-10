@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-01-02 15:33:59.166651",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label_and_print_settings_section",
+  "default_network_printer",
+  "column_break_bfdc",
+  "shipping_and_handling_settings_section",
+  "shipment_cost_target",
+  "column_break_ttll",
+  "item_code",
+  "shipping_account",
+  "shipping_description"
+ ],
+ "fields": [
+  {
+   "default": "Items List",
+   "description": "Choose location on the Sales Invoice where shipping charges should be added (Item list or Sales Taxes and Charges list)",
+   "fieldname": "shipment_cost_target",
+   "fieldtype": "Select",
+   "label": "Sales Invoice Shipping Cost location (Item or Charges )",
+   "options": "Items List\nTaxes and Charges List"
+  },
+  {
+   "fieldname": "column_break_ttll",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.shipment_cost_target === \"Taxes and Charges List\"",
+   "description": "Choose an account where you'd like to track shipping. This is typically an income account.",
+   "fieldname": "shipping_account",
+   "fieldtype": "Link",
+   "label": "Account Head for Shipping Charges",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval: doc.shipment_cost_target === \"Items List\"",
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item Code for Shipping and Handling",
+   "options": "Item"
+  },
+  {
+   "fieldname": "shipping_and_handling_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Shipping and Handling Settings"
+  },
+  {
+   "depends_on": "eval: doc.shipment_cost_target == \"Taxes and Charges List\"",
+   "fieldname": "shipping_description",
+   "fieldtype": "Data",
+   "label": "Description for Shipping Charges"
+  },
+  {
+   "fieldname": "label_and_print_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Label and Print Settings"
+  },
+  {
+   "fieldname": "column_break_bfdc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Leave this setting blank if you'd like to select the Network Printer each time you print via 'Network Print Label' button in shipment doctype.",
+   "fieldname": "default_network_printer",
+   "fieldtype": "Link",
+   "label": "Default Network Printer",
+   "options": "Network Printer Settings"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-01-10 08:21:45.228310",
+ "modified_by": "Administrator",
+ "module": "ERPNext Shipping",
+ "name": "Shipping Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

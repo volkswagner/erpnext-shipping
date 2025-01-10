@@ -5,12 +5,17 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "general_settings_section",
   "enabled",
   "use_test_environment",
   "test_key",
   "production_key",
+  "section_break_shuo",
+  "html_duxx",
   "label_format",
-  "label_to_print"
+  "column_break_lzlm",
+  "label_size",
+  "label_paper_size"
  ],
  "fields": [
   {
@@ -27,13 +32,13 @@
   },
   {
    "fieldname": "test_key",
-   "fieldtype": "Data",
+   "fieldtype": "Password",
    "label": "Test API Key",
    "mandatory_depends_on": "enabled"
   },
   {
    "fieldname": "production_key",
-   "fieldtype": "Data",
+   "fieldtype": "Password",
    "label": "Production API Key",
    "mandatory_depends_on": "enabled"
   },
@@ -42,19 +47,49 @@
    "fieldname": "label_format",
    "fieldtype": "Select",
    "label": "Label Format",
-   "options": "png\npdf\nzpl"
+   "options": "png\npdf\nzpl\nepl2"
   },
   {
-   "fieldname": "label_to_print",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Label to Print"
+   "default": "4X6",
+   "fieldname": "label_size",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Label Size",
+   "options": "4X6\n4X8\n4X4"
+  },
+  {
+   "default": "4X6",
+   "depends_on": "eval: doc.label_format === \"pdf\"",
+   "description": "<strong>Warning:</strong> Choosing 8 1/2\" x 11\" paper size will limit the file type to PDF only. Further conversions (zpl, png, epl2) will not be possible.",
+   "fieldname": "label_paper_size",
+   "fieldtype": "Select",
+   "label": "Label Paper Size",
+   "options": "4X6\n8.5X11"
+  },
+  {
+   "fieldname": "section_break_shuo",
+   "fieldtype": "Section Break",
+   "label": "Label and Print Settings"
+  },
+  {
+   "fieldname": "general_settings_section",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "fieldname": "column_break_lzlm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "html_duxx",
+   "fieldtype": "HTML",
+   "options": "<b>Note</b>: Changes made will only take effect on new shipments. Existing shipments will not be affected."
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-15 05:22:32.183277",
+ "modified": "2025-01-10 06:45:57.187516",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "EasyPost",

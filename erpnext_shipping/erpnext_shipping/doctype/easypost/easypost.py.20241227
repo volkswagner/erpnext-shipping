@@ -10,7 +10,6 @@ from frappe.model.document import Document
 from frappe.utils import flt
 from frappe.utils.data import get_link_to_form
 from requests.exceptions import HTTPError
-from urllib.request import urlopen
 
 from erpnext_shipping.erpnext_shipping.utils import show_error_alert
 
@@ -25,10 +24,9 @@ class EasyPostUtils():
 		# toggle between the test and production keys
 		# self.selected_env = settings.test_key if settings.use_test_environment else settings.production_key
 		# self.api_key = settings.get_password(self.selected_env)
-		self.api_key = settings.get_password("test_key")
+		self.api_key = settings.test_key
 		self.enabled = settings.enabled
 		self.label_format = settings.label_format
-		self.label_size = settings.label_size
 
 		if not self.enabled: # show dialog to prompt user to enable the service provicer
 			link = get_link_to_form("EasyPost", "EasyPost", _("EasyPost Settings"))
@@ -46,25 +44,6 @@ class EasyPostUtils():
 		if not self.enabled or not self.api_key:
 			return []
 		
-		# convert the measurements from metric to English
-		parcel = self.convert_parcel_measurements(
-			{
-				'length': shipment_parcel[0]['length'],
-				'width': shipment_parcel[0]['width'],
-				'height': shipment_parcel[0]['height'],
-				'weight': shipment_parcel[0]['weight']
-			}
-		)
-
-		# set label_size in options
-		options = {
-			'label_size': self.label_size
-		}
-
-		# add label_format pdf if settings is 4x6 pdf
-		if self.label_size == "4X6" and self.label_format == "pdf":
-			options['label_format'] = "pdf"
-
 		# create a shipment object
 		shipment = {
 			'to_address': {
@@ -87,8 +66,12 @@ class EasyPostUtils():
 				'country': 'US',
 				'phone': pickup_contact.phone
 			},
-			'parcel': parcel,
-			'options': options
+			'parcel': {
+				'length': shipment_parcel[0]['length'],
+				'width': shipment_parcel[0]['width'],
+				'height': shipment_parcel[0]['height'],
+				'weight': shipment_parcel[0]['weight']
+			},
 		}
 
 		if delivery_contact.email_id is not None:
@@ -156,59 +139,20 @@ class EasyPostUtils():
 	def get_label(self, shipment_id):
 		# Retrieve shipment label from EasyPost
 		label_url = ""
-		key_format = "" if self.label_format == "png" else self.label_format + "_" # for the corresponding field key of the label object: empty string for png, append '_' to other formats
+		key_format = "" if self.label_format == "png" else self.label_format + "_"
 
-		# request for label first
 		try:
-			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label'.format(id=shipment_id), auth=(self.api_key, ""))
+			shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format={format}'.format(id=shipment_id, format=self.label_format), auth=(self.api_key, ""))
 			shipment_label = shipment_label_response.json()
-			label_url = shipment_label['postage_label']['label_url']
+			label_url = shipment_label['postage_label']['label_{format}url'.format(format=key_format)]
 
 			if label_url:
-				# if label was originally made as 4x6 pdf, just return the label_url value
-				if label_url.endswith("pdf"):
-					return label_url
-				
-				# if not, proceed with the conversion
-				else:
-					try:
-						shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format={format}'.format(id=shipment_id, format=self.label_format), auth=(self.api_key, ""))
-						shipment_label = shipment_label_response.json()
-						label_url = shipment_label['postage_label']['label_{format}url'.format(format=key_format)]
-
-						return label_url
-
-					except Exception:
-						show_error_alert("printing EasyPost Label")
-
+				return label_url
 			else:
 				message = _("Please make sure Shipment (ID: {0}), exists and is a complete Shipment on EasyPost.").format(shipment_id)
 				frappe.msgprint(msg=_(message), title=_("Label Not Found"))
 		except Exception:
 			show_error_alert("printing EasyPost Label")
-
-		# try:
-		# 	shipment_label_response = requests.get('https://api.easypost.com/v2/shipments/{id}/label?file_format={format}'.format(id=shipment_id, format=self.label_format), auth=(self.api_key, ""))
-		# 	shipment_label = shipment_label_response.json()
-		# 	label_url = shipment_label['postage_label']['label_{format}url'.format(format=key_format)]
-
-		# 	if label_url:
-		# 		return label_url
-		# 	else:
-		# 		message = _("Please make sure Shipment (ID: {0}), exists and is a complete Shipment on EasyPost.").format(shipment_id)
-		# 		frappe.msgprint(msg=_(message), title=_("Label Not Found"))
-		# except Exception:
-		# 	show_error_alert("printing EasyPost Label")
-
-	def convert_parcel_measurements(self, parcel):
-		parcel_in_english = {}
-
-		parcel_in_english['length'] = parcel['length'] / 2.54
-		parcel_in_english['width'] = parcel['width'] / 2.54
-		parcel_in_english['height'] = parcel['height'] / 2.54
-		parcel_in_english['weight'] = parcel['weight'] * 2.20462
-
-		return parcel_in_english
 
 	def get_tracking_data(self, shipment_id):
 		# return EasyPost tracking data
@@ -218,7 +162,7 @@ class EasyPostUtils():
 			tracking_data_parcel = tracking_data['tracker']
 
 			return {
-				'awb_number': tracking_data_parcel['tracking_code'],
+				'awb_number': tracking_data_parcel['code'],
 				'tracking_status': tracking_data_parcel['status'],
 				'tracking_status_info': tracking_data_parcel['status_detail'],
 				'tracking_url': tracking_data_parcel['public_url']

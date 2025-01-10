@@ -22,67 +22,35 @@ frappe.ui.form.on("Shipment", {
 			frm.add_custom_button(
 				__("Network Print Label"),
 				function () {
-					// Fetch Shipping settings to check for default_network_printer
-					// Mark changed Easypost to Shipping Settings
-					frappe.call({
-						method: "frappe.client.get",
-						args: {
-							doctype: "Shipping Settings",
-						},
-						callback: function (r) {
-							if (r.message && r.message.default_network_printer) {
-								// Default printer exists, skip the dialog
-								frappe.call({
-									method: "erpnext_shipping.erpnext_shipping.shipping.net_print_shipping_label",
-									args: {
-										shipment: frm.doc.name,
-										printer_setting: r.message.default_network_printer,
-									},
-									callback: function (res) {
-										if (!res.exc) {
-											frappe.msgprint(
-												__("Shipping label sent to printer successfully.")
-											);
-										}
-									},
-								});
-							} else {
-								// No default printer, show dialog to select printer
-								frappe.prompt(
-									[
-										{
-											label: __("Printer Setting"),
-											fieldname: "printer_setting",
-											fieldtype: "Link",
-											options: "Network Printer Settings",
-											reqd: 1,
-										},
-									],
-									function (values) {
-										frappe.call({
-											method: "erpnext_shipping.erpnext_shipping.shipping.net_print_shipping_label",
-											args: {
-												shipment: frm.doc.name,
-												printer_setting: values.printer_setting,
-											},
-											callback: function (res) {
-												if (!res.exc) {
-													frappe.msgprint(
-														__("Shipping label sent to printer successfully.")
-													);
-												}
-											},
-										});
-									},
-									__("Select Printer Setting"),
-									__("Print")
-								);
-							}
-						},
-					});
-				},
-			
-					__("Tools")
+                    frappe.prompt(
+                        [
+                            {
+                                label: __("Printer Setting"),
+                                fieldname: "printer_setting",
+                                fieldtype: "Link",
+                                options: "Network Printer Settings",
+                                reqd: 1,
+                            },
+                        ],
+                        function (values) {
+                            frappe.call({
+                                method: "erpnext_shipping.erpnext_shipping.shipping.net_print_shipping_label",
+                                args: {
+                                    shipment: frm.doc.name,
+                                    printer_setting: values.printer_setting,
+                                },
+                                callback: function (r) {
+                                    if (!r.exc) {
+                                        frappe.msgprint(__("Shipping label sent to printer successfully."));
+                                    }
+                                },
+                            });
+                        },
+                        __("Select Printer Setting"),
+                        __("Print")
+                    );
+                },
+                __("Tools")
 			);
 			if (frm.doc.tracking_status != "Delivered") {
 				frm.add_custom_button(
@@ -115,66 +83,6 @@ frappe.ui.form.on("Shipment", {
 				);
 			}
 		}
-
-		if (frm.doc.status === "Booked" || frm.doc.status === "Completed") {
-    		frm.add_custom_button(
-    		    "Create Sales Invoice", 
-    		    function() {
-					frappe.call({
-						method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.check_settings_if_complete",
-						freeze: true,
-						freeze_message: "Checking Setttings",
-						callback: function(r) {
-							if (!r.exc) {
-								if (frm.doc.shipment_delivery_note) {
-									let dialog = new frappe.ui.Dialog({
-										title: __('Add Shipping Cost'),
-										fields: [
-											{
-												label: 'Shipment Cost',
-												fieldname: 'shipment_cost',
-												fieldtype: 'Currency',
-												read_only: 1,
-												default: frm.doc.shipment_amount
-											},
-											{
-												label: 'Handling Fee',
-												fieldname: 'handling_fee',
-												fieldtype: 'Currency',
-												default: 2
-											}
-										],
-										primary_action_label: 'Proceed',
-										primary_action: function (values) {
-											frappe.model.open_mapped_doc({
-												method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.make_sales_invoice_from_shipment",
-												frm: frm,
-												args: {
-													delivery_note: frm.doc.shipment_delivery_note[0].delivery_note,
-													shipping_total: frm.doc.shipment_amount + (values.handling_fee || 0),
-													tracking_url: frm.doc.tracking_url
-												},
-												freeze: true,
-												freeze_message: "Creating New Sales Invoice",
-											})
-										}
-									})
-									
-									dialog.show()
-								}
-								else {
-									frappe.msgprint({
-										title: "Can't Create Sales Invoice",
-										indicator: "orange",
-										message: "The shipment doesn't have a delivery note associated with it."
-									});
-								}
-							}
-						}
-					})
-    		    }
-    		)
-	    }
 	},
 
 	fetch_shipping_rates: function (frm) {
@@ -261,30 +169,10 @@ frappe.ui.form.on("Shipment", {
 			callback: function (r) {
 				if (!r.exc) {
 					frm.reload_doc();
-					$('div[data-fieldname="shipment_information_section"]')[0].scrollIntoView();
 				}
 			},
 		});
 	},
-
-	before_submit: async (frm) => {
-	    if (frm.doc.shipment_parcel.length > 1) {
-            let prompt = new Promise((resolve, reject) => {
-                frappe.confirm(
-                    `The shipment has <b>${frm.doc.shipment_parcel.length}</b> parcels.\n EasyPost will not appear in the rates table as it does not support multiple parcels. Continue anyways?</b>`,
-                    () => resolve(),
-                    () => reject()
-                );
-            });
-            await prompt.then(
-                () => frappe.show_alert("Shipment successfully submitted.", 5), 
-                () => {
-                    frappe.validated = false;
-                    frappe.show_alert("Shipment submission cancelled.", 5)
-                }
-            );
-	    }
-	}
 });
 
 function select_from_available_services(frm, available_services) {

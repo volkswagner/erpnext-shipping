@@ -1,11 +1,9 @@
 # Copyright (c) 2020, Frappe Technologies and contributors
 # For license information, please see license.txt
 import json
-import os
-import requests
+
 import frappe
 from erpnext.stock.doctype.shipment.shipment import get_company_contact
-from frappe import _
 
 from erpnext_shipping.erpnext_shipping.doctype.letmeship.letmeship import (
 	LETMESHIP_PROVIDER,
@@ -84,7 +82,7 @@ def fetch_shipping_rates(
 		sendcloud_prices = match_parcel_service_type_carrier(sendcloud_prices, "carrier", "service_name")
 		shipment_prices += sendcloud_prices
 
-	if easypost_enabled and len(parcels) == 1:
+	if easypost_enabled:
 		pickup_contact = None
 		delivery_contact = None
 		if pickup_from_type != "Company":
@@ -226,7 +224,6 @@ def get_delivery_company_name(shipment: str) -> str | None:
 	return None
 
 
-#standard label printing
 @frappe.whitelist()
 def print_shipping_label(shipment: str):
 	shipment_doc = frappe.get_doc("Shipment", shipment)
@@ -251,89 +248,8 @@ def print_shipping_label(shipment: str):
 	return shipping_label
 
 
-#send label to network printer
-@frappe.whitelist()
-def net_print_shipping_label(shipment: str, printer_setting: str):
-    shipment_doc = frappe.get_doc("Shipment", shipment)
-    service_provider = shipment_doc.service_provider
-    shipment_id = shipment_doc.shipment_id
-    shipping_label_url = None
-
-    # Fetch the shipping label URL
-    if service_provider == LETMESHIP_PROVIDER:
-        letmeship = get_letmeship_utils()
-        shipping_label_url = letmeship.get_label(shipment_id)
-    elif service_provider == SENDCLOUD_PROVIDER:
-        sendcloud = SendCloudUtils()
-        _labels = sendcloud.get_label(shipment_id)
-        if _labels:
-            shipping_label_url = _labels[0]
-    elif service_provider == EASYPOST_PROVIDER:
-        easypost = EasyPostUtils()
-        shipping_label_url = easypost.get_label(shipment_id)
-
-    if not shipping_label_url:
-        frappe.throw(_("No shipping label found for shipment ID: {0}").format(shipment_id))
-
-    # Print the label
-    try:
-        print_label_from_url(shipping_label_url, printer_setting)
-    except Exception as e:
-        frappe.throw(_("Failed to print the shipping label: {0}").format(str(e)))
-
-    return _("Shipping label sent to printer successfully.")
-
-
-def print_label_from_url(label_url: str, printer_setting: str):
-# Downloads a file from a URL and sends it to the configured network printer.
-    import cups
-
-    # Fetch EasyPost settings
-    easypost_settings = frappe.get_single("EasyPost")
-    default_printer = easypost_settings.default_network_printer
-
-    # Fetch printer settings
-    print_settings = frappe.get_doc("Network Printer Settings", printer_setting)
-
-    # Use the default printer if specified; otherwise, fallback to provided printer_setting
-    selected_printer = default_printer if default_printer else printer_setting
-
-    if not selected_printer:
-        frappe.throw(_("No printer selected or configured."))
-
-
-    try:
-        # Download the label from the URL
-        response = requests.get(label_url)
-        response.raise_for_status()
-
-        # Save the label locally
-        file_name = os.path.basename(label_url)
-        local_path = os.path.join("/tmp", file_name)
-        with open(local_path, "wb") as f:
-            f.write(response.content)
-
-        # Set up CUPS connection
-        cups.setServer(print_settings.server_ip)
-        cups.setPort(print_settings.port)
-        conn = cups.Connection()
-
-        # Print the file
-        conn.printFile(print_settings.printer_name, local_path, "Shipping Label", {})
-
-        # Clean up the temporary file
-        os.remove(local_path)
-
-    except requests.exceptions.RequestException as e:
-        frappe.throw(_("Failed to download the label: {0}").format(e))
-    except cups.IPPError as e:
-        frappe.throw(_("Printing failed due to CUPS error: {0}").format(e))
-    except Exception as e:
-        frappe.throw(_("An error occurred while printing: {0}").format(e))
-
-
 def save_label_as_attachment(shipment: str, content: bytes) -> str:
-#Store label as attachment to Shipment and return the URL.
+	"""Store label as attachment to Shipment and return the URL."""
 	attachment = frappe.new_doc("File")
 
 	attachment.file_name = f"label_{shipment}.pdf"
@@ -360,9 +276,6 @@ def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None
 	elif service_provider == SENDCLOUD_PROVIDER:
 		sendcloud = SendCloudUtils()
 		tracking_data = sendcloud.get_tracking_data(shipment_id)
-	elif service_provider == EASYPOST_PROVIDER:
-		easypost = EasyPostUtils()
-		tracking_data = easypost.get_tracking_data(shipment_id)
 
 	if not tracking_data:
 		return
