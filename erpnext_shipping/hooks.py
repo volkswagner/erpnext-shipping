@@ -33,7 +33,8 @@ app_include_js = ["shipping.bundle.js"]
 # include js in doctype views
 doctype_js = {
 	"Shipment": "public/js/shipment.js",
-	"Address": "public/js/address.js"
+	"Address": "public/js/address.js",
+	"Sales Invoice": "public/js/sales_invoice.js"
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -93,11 +94,12 @@ after_install = "erpnext_shipping.install.after_install"
 # Hook on document methods and events
 
 # doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# }
+# 	# "*": {
+# 	# 	"on_update": "method",
+# 	# 	"on_cancel": "method",
+# 	# 	"on_trash": "method"
+# 	# }
+	
 # }
 
 # Scheduled Tasks
@@ -199,4 +201,13 @@ shipping_custom_fields = {
 			"insert_after": "tracking_status",
 		},
 	]
+}
+
+doc_events = {
+	"Shipment": {
+		"validate": [
+			"erpnext_shipping.erpnext_shipping.utils.validate_parcels",
+			"erpnext_shipping.erpnext_shipping.utils.validate_phone",
+		]
+	},
 }

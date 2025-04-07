@@ -6,6 +6,7 @@ import requests
 import json
 from frappe.model.document import Document
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
+from frappe.query_builder import Field, Order, DocType
 
 from erpnext_shipping.erpnext_shipping.utils import show_error_alert
 
@@ -96,7 +97,7 @@ def make_sales_invoice_from_shipment(shipment):
 	if shipment_cost_target == "Items List":
 		item_code = shipping_settings.item_code
 		if item_code:
-			company_name = frappe.get_value("Delivery Note", delivery_note, "company")
+			company_name = frappe.db.get_value("Delivery Note", delivery_note, "company")
 			si_doc.append("items", {
 				'item_code': item_code,
 				'item_name': frappe.db.get_value("Item", item_code, "item_name"),
@@ -146,6 +147,8 @@ def make_sales_invoice_from_shipment(shipment):
 	else:
 		si_doc.shipment = ', '.join(frappe.flags.args.shipments)
 
+	si_doc.set_taxes()
+	si_doc.calculate_taxes_and_totals()
 
 	return si_doc
 
@@ -295,9 +298,13 @@ def update_address(
 
 @frappe.whitelist()
 def validate_submission(shipment_name, address_name):
+	shipment = frappe.get_doc("Shipment", shipment_name).as_dict()
 	is_currency_set = frappe.db.get_single_value("Shipping Settings", "rates_currency")
-	is_single_parcel = len(frappe.get_doc("Shipment", shipment_name).as_dict().shipment_parcel) == 1
+	has_parcel = len(shipment.shipment_parcel) != 0
+	is_single_parcel = len(shipment.shipment_parcel) <= 1
 	is_address_verified = frappe.db.get_value("Address", address_name, "is_verified")
+	is_customs_items_fulfilled =  len(shipment.customs_items) and shipment.customs_signer and shipment.eel_pfc if check_if_international(shipment.delivery_address_name, shipment.pickup_address_name) else 1
+
 	error_list = []
 	error_messages = {}
 
@@ -307,6 +314,15 @@ def validate_submission(shipment_name, address_name):
 	if not is_currency_set:
 		error_list.append("currency_not_set")
 		error_messages["currency_not_set"] = 'The currency for rates has not been set. To prevent this error from happening, set Rates Currency <a target="_blank" href={}?focus=rates_currency>here</a>.'.format(shipping_settings_link)
+	
+	if not has_parcel:
+		error_list.append("no_parcel")
+		error_messages["no_parcel"] = 'The Parcel table is empty. Add at least one row.'
+
+	if not is_customs_items_fulfilled:
+		error_list.append("customs_items_unfulfilled")
+		error_messages["customs_items_unfulfilled"] = 'The customs info is missing some information. Ensure that the fields Customs Signer and EEL Code are filled in and that the Customs Items table has at least one row.'
+	
 	if not is_single_parcel:
 		error_list.append("multiple_parcels")
 		error_messages["multiple_parcels"] = 'EasyPost will not appear in the rates table because there are multiple parcels in this shipment. To see EasyPost in the list, reduce your parcel to 1 only.'
@@ -314,6 +330,8 @@ def validate_submission(shipment_name, address_name):
 	if not is_address_verified:
 		error_list.append("unverified_address")
 		error_messages["unverified_address"] = 'The address is unverified so ensure that it\'s correct. To correct the address or perform a verification, visit the address doc <a target="blank" href={}>here</a>'.format(address_link)
+
+	# frappe.throw(str(error_list))
 
 	def formulate_digest_message():
 		message = ""
@@ -324,27 +342,141 @@ def validate_submission(shipment_name, address_name):
 		return "The submission was halted because of the following:<br/><ol>{}</ol>".format(message)
 
 	return {
-		"status": "validated" if is_currency_set and is_single_parcel and is_address_verified else "unvalidated",
-		"error_type": "digest" if not is_currency_set and len(error_list) > 1 else "individual",
+		"status": "validated" if is_currency_set and has_parcel and is_customs_items_fulfilled and is_single_parcel and is_address_verified else "unvalidated",
+		"error_type": "digest" if len(error_list) > 1 and (not is_currency_set or not has_parcel or not is_customs_items_fulfilled) else "individual",
 		"error_list": error_list,
-		"error_messages": formulate_digest_message() if not is_currency_set and len(error_list) > 1 else error_messages
+		"error_messages": formulate_digest_message() if len(error_list) > 1 and (not is_currency_set or not has_parcel or not is_customs_items_fulfilled) else error_messages
 	}
 
 
 @frappe.whitelist()
-def find_related_shipments(delivery_note_name, current_shipment):
-	shipment_delivery_note = frappe.qb.DocType('Shipment Delivery Note')
-	shipment = frappe.qb.DocType('Shipment')
-	sales_invoice = frappe.qb.DocType('Sales Invoice')
+def find_related_shipments(current_shipment):
+	shipment_delivery_note = DocType('Shipment Delivery Note')
+	shipment = DocType('Shipment')
+
+	# get list of invoiced shipments
+	def get_invoiced_shipments_list():
+		# list shipment fields of all invoices
+		invoiced_shipments_data = frappe.db.get_list(
+			'Sales Invoice', 
+			filters={
+				'shipment': ["!=", ""]
+			},
+			pluck='shipment'
+		)
+		invoiced_shipments = []
+		
+		# loop through the list
+		for s in invoiced_shipments_data:
+			# check if multiple shipments
+			if ',' in s:
+				shipments_sublist = s.split(', ')
+				invoiced_shipments = invoiced_shipments + shipments_sublist
+			else:
+				invoiced_shipments.append(s)
+				
+		return invoiced_shipments
+
+	# show error if shipment is already invoiced
+	if current_shipment in get_invoiced_shipments_list():
+		frappe.throw('This shipment has already been invoiced.')
 
 	query = (frappe.qb.from_(shipment_delivery_note)
 		.inner_join(shipment)
 		.on(shipment.name == shipment_delivery_note.parent)
 		.select(shipment.name, shipment.value_of_goods, shipment.description_of_content, shipment.shipment_amount, shipment.creation, shipment.shipment_type, shipment.pickup_type)
-		.where(shipment_delivery_note.delivery_note == delivery_note_name)
+		.where(shipment_delivery_note.delivery_note.isin(frappe.qb.from_(shipment_delivery_note).select(shipment_delivery_note.delivery_note).where(shipment_delivery_note.parent == current_shipment)))
 		.where(shipment.name != current_shipment)
 		.where((shipment.status == 'Booked') | (shipment.status == 'Completed'))
-		.where(shipment.name.notin(frappe.qb.from_(sales_invoice).select(sales_invoice.shipment).where(sales_invoice.shipment.isnotnull())))
+		.where(shipment.name.notin(get_invoiced_shipments_list()))
+		.distinct()
 	)
 
 	return query.run(as_dict=1)
+
+@frappe.whitelist()
+def check_if_international(to_address, from_address):
+	to_country = frappe.db.get_value("Address", to_address, "country")
+	from_country = frappe.db.get_value("Address", from_address, "country")
+
+	return not(to_country == from_country)
+
+@frappe.whitelist()
+def get_customs_info_from_parcel(parcels, description, value_of_goods):
+	parcel_list = json.loads(parcels)
+	tariff_code = frappe.db.get_single_value("Shipping Settings", "default_tariff_code")
+
+	if len(parcel_list) == 0:
+		frappe.throw('This shipment does not have any parcel.')
+	if len(parcel_list) > 1:
+		frappe.throw('You can only add from single-parcel shipments.')
+
+	return [{
+		'description': description,
+		'qty': 1,
+		'weight': parcel_list[0]['weight'],
+		'value': value_of_goods,
+		'hs_tariff_number': tariff_code
+	}]
+
+@frappe.whitelist()
+def get_customs_info_from_delivery_note(delivery_note, group_similar_items):
+	if not delivery_note:
+		frappe.throw('Please add a delivery note to the shipment doc.')
+		
+	delivery_note_item = frappe.qb.DocType('Delivery Note Item')
+	item = frappe.qb.DocType('Item')
+	tariff_code = frappe.db.get_single_value("Shipping Settings", "default_tariff_code")
+
+
+	query = (frappe.qb.from_(delivery_note_item)
+		.inner_join(item)
+		.on(item.name == delivery_note_item.item_code)
+		.select(
+			item.name.as_('referenced_item'),
+			item.weight_per_unit.as_('weight'),
+			item.customs_tariff_number.as_('hs_tariff_number'), 
+			item.description, 
+			delivery_note_item.qty, 
+			delivery_note_item.rate.as_('value'))
+		.where(delivery_note_item.parent == delivery_note)
+		.distinct()
+	)
+	
+	items_list = query.run(as_dict=1)
+
+	if tariff_code:
+		for idx, item in enumerate(items_list):
+			if not item['hs_tariff_number']:
+				items_list[idx]['hs_tariff_number'] = tariff_code
+
+	
+	if int(group_similar_items):
+		grouped_items_list = []
+		grouped_items_names = []
+
+		for item in items_list:
+			if item['hs_tariff_number'] in grouped_items_names and item['hs_tariff_number'] != None:
+				item_index = grouped_items_names.index(item['hs_tariff_number'])
+				grouped_items_list[item_index]['qty'] += item['qty'] # increase qty
+				grouped_items_list[item_index]['item_count'] = grouped_items_list[item_index]['item_count'] + 1
+				grouped_items_list[item_index]['value'] += item['value']
+				grouped_items_list[item_index]['weight'] += item['weight']
+				grouped_items_list[item_index]['referenced_item'] = grouped_items_list[item_index]['referenced_item'] + ', ' + item['referenced_item']
+
+			else:
+				grouped_items_names.append(item['hs_tariff_number'])
+				grouped_items_list.append(item.update({'item_count': 1}))
+
+		# update value to find average
+		for idx, item in enumerate(grouped_items_list):
+			if item['item_count'] > 1 :
+				items_list[idx]['value'] = item['value']/item['item_count']
+				items_list[idx]['weight'] = item['weight']/item['item_count']
+
+		return grouped_items_list
+
+
+	return items_list
+
+	

@@ -8,6 +8,12 @@
   "shipment_doc_settings_section",
   "rates_currency",
   "flag_multiple_parcels",
+  "default_pickup_contact",
+  "international_shipping_settings_section",
+  "country_of_origin",
+  "default_customs_signer",
+  "default_eel_pfc",
+  "default_tariff_code",
   "address_settings_section",
   "verify_address",
   "address_verification_tool",
@@ -137,12 +143,50 @@
    "fieldname": "address_settings_section",
    "fieldtype": "Section Break",
    "label": "Address Settings"
+  },
+  {
+   "description": "<b>Important</b>: Ensure that the user has a default phone number as it will not appear here if it has none.",
+   "fieldname": "default_pickup_contact",
+   "fieldtype": "Link",
+   "label": "Default Pickup From Contact User",
+   "link_filters": "[[\"User\",\"phone\",\"is\",\"set\"]]",
+   "options": "User"
+  },
+  {
+   "description": "When set, the value will be applied to items without tariff number.",
+   "fieldname": "default_tariff_code",
+   "fieldtype": "Data",
+   "label": "Default Tariff Code"
+  },
+  {
+   "fieldname": "international_shipping_settings_section",
+   "fieldtype": "Section Break",
+   "label": "International Shipping Settings"
+  },
+  {
+   "fieldname": "country_of_origin",
+   "fieldtype": "Link",
+   "label": "Country of Origin",
+   "options": "Country"
+  },
+  {
+   "description": "Person in the organization who is certifying that the customs information is accurate",
+   "fieldname": "default_customs_signer",
+   "fieldtype": "Link",
+   "label": "Default Customs Signer",
+   "options": "User"
+  },
+  {
+   "description": "Refer to this <a style=\"text-decoration: underline;\" href=\"https://pe.usps.com/imm_archive/html/imm_archive_20110811/imm/immc5_012.htm\" target=\"_blank\">link</a> for the value.",
+   "fieldname": "default_eel_pfc",
+   "fieldtype": "Data",
+   "label": "Default Exemption and Exclusion Legend (EEL) code or a Proof of Filing Citation (PFC)"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-02-24 07:53:29.611084",
+ "modified": "2025-04-01 11:01:33.174438",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "Shipping Settings",

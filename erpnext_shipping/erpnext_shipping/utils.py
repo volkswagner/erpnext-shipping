@@ -1,5 +1,7 @@
 # Copyright (c) 2020, Frappe Technologies and contributors
 # For license information, please see license.txt
+import re
+
 import frappe
 from frappe import _
 from frappe.utils.data import get_link_to_form
@@ -45,6 +47,37 @@ def validate_address(address):
 
 	if not address.pincode or address.pincode.strip() == "":
 		frappe.throw(_("Please add a valid pincode in Address {0}.").format(address.address_title))
+
+
+def validate_parcels(doc, method=None):
+	if doc.docstatus != 0:
+		return
+
+	for parcel in doc.shipment_parcel:
+		for field in ("length", "width", "height"):
+			if (parcel.get(field) or 0) < 1:
+				frappe.throw(
+					_("Parcel row {idx}: {field_label} must be at least 1 cm.").format(
+						idx=parcel.idx, field_label=_(parcel.meta.get_label(field))
+					)
+				)
+
+
+def validate_phone(doc, method=None):
+	default_contact = frappe.db.get_single_value("Shipping Settings", "default_pickup_contact")
+	if default_contact:
+		doc.pickup_contact_person = default_contact
+
+	if doc.pickup_from_type == "Company":
+		phone_number = frappe.db.get_value("User", doc.pickup_contact_person, "phone")
+	else:
+		phone_number = frappe.db.get_value("Contact", doc.pickup_contact_name, "phone")
+
+	if not phone_number:
+		frappe.throw(_("Pickup contact phone is required."))
+
+	if not re.match(r"^\+(?![\s0])[\d\s]+\d$", phone_number):
+		frappe.throw(_("Pickup contact phone must consist of a '+' followed by one or more digits."))
 
 
 def get_country_code(country_name):
@@ -120,7 +153,7 @@ def update_tracking_info_daily():
 			shipment.name,
 			shipment_doc.service_provider,
 			shipment_doc.shipment_id,
-			shipment_doc.shipment_delivery_notes,
+			shipment_doc.shipment_delivery_note,
 		)
 
 		if tracking_info:

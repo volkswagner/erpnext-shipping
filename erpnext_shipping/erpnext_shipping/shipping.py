@@ -23,6 +23,7 @@ from erpnext_shipping.erpnext_shipping.doctype.easypost.easypost import EASYPOST
 
 @frappe.whitelist()
 def fetch_shipping_rates(
+	shipment_doc,
 	pickup_from_type,
 	delivery_to_type,
 	pickup_address_name,
@@ -72,10 +73,13 @@ def fetch_shipping_rates(
 		letmeship_prices = match_parcel_service_type_carrier(letmeship_prices, "carrier", "service_name")
 		shipment_prices += letmeship_prices
 
-	if sendcloud_enabled and pickup_from_type == "Company":
+	if sendcloud_enabled:
 		sendcloud = SendCloudUtils()
 		sendcloud_prices = (
-			sendcloud.get_available_services(delivery_address=delivery_address, parcels=parcels) or []
+			sendcloud.get_available_services(
+				delivery_address=delivery_address, pickup_address=pickup_address, parcels=parcels
+			)
+			or []
 		)
 		sendcloud_prices = match_parcel_service_type_carrier(sendcloud_prices, "carrier", "service_name")
 		shipment_prices += sendcloud_prices
@@ -100,6 +104,7 @@ def fetch_shipping_rates(
 		easypost = EasyPostUtils()
 		easypost_prices = (
 			easypost.get_available_services(
+				shipment_doc,
 				delivery_address=delivery_address,
 				delivery_contact=delivery_contact,
 				shipment_parcel=parcels,
@@ -135,7 +140,9 @@ def create_shipment(
 	delivery_contact_name=None,
 	delivery_notes=None,
 ):
-	# Create Shipment for the selected provider
+	if isinstance(delivery_notes, str):
+		delivery_notes = json.loads(delivery_notes)
+
 	if delivery_notes is None:
 		delivery_notes = []
 
@@ -173,11 +180,10 @@ def create_shipment(
 		sendcloud = SendCloudUtils()
 		shipment_info = sendcloud.create_shipment(
 			shipment=shipment,
-			delivery_company_name=delivery_company_name,
 			delivery_address=delivery_address,
+			pickup_address=pickup_address,
+			pickup_contact=pickup_contact,
 			shipment_parcel=shipment_parcel,
-			description_of_content=description_of_content,
-			value_of_goods=value_of_goods,
 			delivery_contact=delivery_contact,
 			service_info=service_info,
 		)
@@ -235,9 +241,9 @@ def print_shipping_label(shipment: str):
 		sendcloud = SendCloudUtils()
 		shipping_label = []
 		_labels = sendcloud.get_label(shipment_id)
-		for label_url in _labels:
+		for i, label_url in enumerate(_labels, start=1):
 			content = sendcloud.download_label(label_url)
-			file_url = save_label_as_attachment(shipment, content)
+			file_url = save_label_as_attachment(shipment, content, i)
 			shipping_label.append(file_url)
 	elif service_provider == EASYPOST_PROVIDER:
 		easypost = EasyPostUtils()
@@ -344,20 +350,24 @@ def print_label_from_url(label: str, printer_setting: str, is_byte_data: bool, s
 def save_label_as_attachment(shipment: str, content: bytes) -> str:
 #Store label as attachment to Shipment and return the URL.
 	attachment = frappe.new_doc("File")
-
-	attachment.file_name = f"label_{shipment}.pdf"
+	if index is not None:
+		attachment.file_name = f"label_{shipment}_{index}.pdf"
+	else:
+		attachment.file_name = f"label_{shipment}.pdf"
 	attachment.content = content
 	attachment.folder = "Home/Attachments"
 	attachment.attached_to_doctype = "Shipment"
 	attachment.attached_to_name = shipment
 	attachment.is_private = 1
 	attachment.save()
-
 	return attachment.file_url
 
 
 @frappe.whitelist()
 def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None):
+	if isinstance(delivery_notes, str):
+		delivery_notes = json.loads(delivery_notes)
+
 	if delivery_notes is None:
 		delivery_notes = []
 
@@ -393,9 +403,6 @@ def update_tracking(shipment, service_provider, shipment_id, delivery_notes=None
 def update_delivery_note(delivery_notes, shipment_info=None, tracking_info=None):
 	# Update Shipment Info in Delivery Note
 	# Using db_set since some services might not exist
-	if isinstance(delivery_notes, str):
-		delivery_notes = json.loads(delivery_notes)
-
 	delivery_notes = list(set(delivery_notes))
 
 	for delivery_note in delivery_notes:

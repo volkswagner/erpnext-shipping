@@ -2,7 +2,11 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Shipment", {
-	refresh: function (frm) {
+	load: async function (frm) {
+		toggle_customs_info(frm)
+	},
+
+	refresh: async function (frm) {
 		if (frm.doc.docstatus === 1 && !frm.doc.shipment_id) {
 			frm.add_custom_button(__("Fetch Shipping Rates"), function () {
 				if (frm.doc.shipment_parcel.length > 1) {
@@ -80,12 +84,13 @@ frappe.ui.form.on("Shipment", {
 						freeze: true,
 						freeze_message: "Checking Setttings",
 						callback: function(r) {
+							console.log(frm.doc.shipment_delivery_note[0].delivery_note)
+							console.log(frm.doc.name)
 							if (!r.exc) {
 								if (frm.doc.shipment_delivery_note) {
 									frappe.call({
 										method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.find_related_shipments",
 										args: {
-											delivery_note_name: frm.doc.shipment_delivery_note[0].delivery_note,
 											current_shipment: frm.doc.name
 										},
 										callback: function(r) {
@@ -133,12 +138,6 @@ frappe.ui.form.on("Shipment", {
 															allow_bulk_edit: 0,
 															data: shipments,
 															fields: [
-																// { 
-																// 	fieldname: 'is_included',
-																// 	fieldtype: 'Check',
-																// 	in_list_view: 1,
-																// 	label: 'Include?'
-																// },
 																{
 																	fieldname: 'name',
 																	fieldtype: 'Link',
@@ -239,7 +238,6 @@ frappe.ui.form.on("Shipment", {
 													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="__column_1"]').addClass('col-md-9')
 													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="shipping_cost_column"]').addClass('col-md-3')
 													shipping_cost_dialog.$wrapper.find('.panel-title').hide()
-													console.log(shipping_cost_dialog.$wrapper)
 													shipping_cost_dialog.$wrapper.find('use[href="#icon-down"]').attr('href', '#icon-up')
 													shipping_cost_dialog.$wrapper.find('use[href="#icon-edit"]').attr('href', '#icon-down')
 													shipping_cost_dialog.$wrapper.find('div[data-fieldname="related_shipments"] .grid-row input[type="checkbox"]').on('change', function () {
@@ -247,7 +245,6 @@ frappe.ui.form.on("Shipment", {
 														let selected_shipments = table_data.filter(row => row.__checked)
 														let shipment_sum = selected_shipments.reduce((sum, shipment) => sum + shipment.shipment_amount, 0)
 														shipment_list = selected_shipments.map(shipment => shipment.name)
-														console.log(shipment_list)
 														shipping_cost_dialog.set_value('shipment_cost', shipment_sum)
 													})
 												}
@@ -270,6 +267,24 @@ frappe.ui.form.on("Shipment", {
     		    }
     		)
 	    }
+
+		if (frm.is_new()) {
+			let shipping_settings = await get_shipping_settings()
+			console.log(shipping_settings)
+
+			if (shipping_settings.default_customs_signer) frm.set_value('customs_signer', shipping_settings.default_customs_signer)
+			if (shipping_settings.default_eel_pfc) frm.set_value('eel_pfc', shipping_settings.default_eel_pfc)
+		}
+
+		toggle_customs_info(frm)
+	},
+
+	pickup_address_name: function (frm) {
+		toggle_customs_info(frm)
+	},
+
+	delivery_address_name: function (frm) {
+		toggle_customs_info(frm)
 	},
 
 	fetch_shipping_rates: function (frm) {
@@ -279,6 +294,7 @@ frappe.ui.form.on("Shipment", {
 				freeze: true,
 				freeze_message: __("Fetching Shipping Rates"),
 				args: {
+					shipment_doc: frm.doc.name,
 					pickup_from_type: frm.doc.pickup_from_type,
 					delivery_to_type: frm.doc.delivery_to_type,
 					pickup_address_name: frm.doc.pickup_address_name,
@@ -338,11 +354,86 @@ frappe.ui.form.on("Shipment", {
 		});
 	},
 
+	add_customs_info_from_parcel: function (frm) {
+		if (frm.doc.shipment_parcel &&
+			frm.doc.description_of_content && 
+			frm.doc.value_of_goods
+		) {
+			frappe.call({
+				method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.get_customs_info_from_parcel",
+				args: {
+					parcels: frm.doc.shipment_parcel,
+					description: frm.doc.description_of_content,
+					value_of_goods: frm.doc.value_of_goods
+				},
+				freeze: true,
+				freeze_message: __('Pulling Item from Parcel'),
+				callback: function(r) {
+					if (r.message) {
+						let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items')
+						customs_item_entry.description = r.message[0].description
+						customs_item_entry.qty = r.message[0].qty
+						customs_item_entry.weight = r.message[0].weight
+						customs_item_entry.value = r.message[0].value
+						customs_item_entry.hs_tariff_number = r.message[0].hs_tariff_number
+						frm.refresh_field('customs_items')
+						frm.dirty()
+					}
+	
+				}
+			})
+		}
+		else {
+			frappe.throw(__(`
+				The required information are missing. Ensure that the following fields are filled in:
+				<br/>
+				<ul>
+					<li>Parcel Table</li>
+					<li>Description of Content</li>
+					<li>Value of Goods</li>
+				</ul>
+			`))
+		}
+	},
+
+	add_customs_info_from_delivery_note: function (frm) {
+		if (frm.doc.shipment_delivery_note.length > 0) {
+			frappe.call({
+				method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.get_customs_info_from_delivery_note",
+				args: {
+					delivery_note: frm.doc.shipment_delivery_note[0].delivery_note,
+					group_similar_items: frm.doc.group_similar_items
+				},
+				freeze: true,
+				freeze_message: __('Pulling Items from Delivery Note'),
+				callback: function(r) {
+					if (r.message) {
+						let customs_items_list = r.message
+	
+						customs_items_list.forEach(function (customs_item) {
+							let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items')
+							customs_item_entry.description = customs_item.description
+							customs_item_entry.qty = customs_item.qty
+							customs_item_entry.weight = customs_item.weight
+							customs_item_entry.value = customs_item.value
+							customs_item_entry.hs_tariff_number = customs_item.hs_tariff_number
+							customs_item_entry.referenced_item = customs_item.referenced_item
+							frm.refresh_field('customs_items')
+							frm.dirty()
+						})
+					}
+	
+				}
+			})
+		}
+		else {
+			frappe.throw(__('No shipment delivery note to pull items from. Ensure that the Delivery Note table is filled in.'))
+		}
+	},
+
 	update_tracking: function (frm, service_provider, shipment_id) {
-		let delivery_notes = [];
-		(frm.doc.shipment_delivery_note || []).forEach((d) => {
-			delivery_notes.push(d.delivery_note);
-		});
+		const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
+
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.update_tracking",
 			freeze: true,
@@ -440,6 +531,7 @@ frappe.ui.form.on("Shipment", {
 								const mismatch_dialog = new frappe.ui.Dialog({
 									title: __("Address Mismatch Found"),
 									size: "medium",
+									static: true,
 									fields: [
 										{
 											fieldtype: "HTML",
@@ -478,6 +570,7 @@ frappe.ui.form.on("Shipment", {
 								const fail_dialog = new frappe.ui.Dialog({
 									title: __("Address Not Found"),
 									size: "medium",
+									static: true,
 									fields: [
 										{
 											fieldtype: "HTML",
@@ -553,6 +646,14 @@ frappe.ui.form.on("Shipment", {
 							show_rates_error(response.error_messages.currency_not_set)
 						}
 
+						if (response.error_list.includes("no_parcel")) {
+							frappe.throw(__(response.error_messages.no_parcel))
+						}
+
+						if (response.error_list.includes("customs_items_unfulfilled")) {
+							frappe.throw(__(response.error_messages.customs_items_unfulfilled))
+						}
+
 						if (response.error_list.includes("multiple_parcels")) {
 							show_parcel_count_warning()
 						}
@@ -564,6 +665,7 @@ frappe.ui.form.on("Shipment", {
 				}
 			}
 		})
+
 	}
 });
 
@@ -653,10 +755,7 @@ async function select_from_available_services(frm, available_services) {
 		],
 	});
 
-	let delivery_notes = [];
-	(frm.doc.shipment_delivery_note || []).forEach((d) => {
-		delivery_notes.push(d.delivery_note);
-	});
+	const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
 
 	let shipping_settings = await get_shipping_settings()
 
@@ -723,4 +822,42 @@ async function select_from_available_services(frm, available_services) {
 
 	};
 	select_dialog.show();
+}
+
+async function check_if_international(frm) {
+	if (frm.doc.delivery_address_name && frm.doc.pickup_address_name) {
+		return response = await new Promise((resolve, reject) => {
+			frappe.call({
+				method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.check_if_international",
+				args: {
+					to_address: frm.doc.delivery_address_name,
+					from_address: frm.doc.pickup_address_name
+				},
+				callback: function(r) {
+					if (!r.exc) resolve(r.message);
+					else reject(r.exc);
+				}
+			})
+		})
+	}
+
+	return 0
+}
+
+async function toggle_customs_info(frm) {
+	let customs_sections = ['customs_info_section', 'customs_actions_section', 'customs_items_section']
+
+	let is_international = await check_if_international(frm)
+
+	customs_sections.forEach(function (section) {
+		frm.set_df_property(section, 'hidden', !is_international)
+	})
+
+	if (frm.doc.docstatus === 1) {
+		frm.set_df_property(customs_sections[1], 'hidden', 1)
+
+		if (frm.doc.customs_items.length === 0) {
+			frm.set_df_property(customs_sections[0], 'hidden', 1)
+		}
+	}
 }

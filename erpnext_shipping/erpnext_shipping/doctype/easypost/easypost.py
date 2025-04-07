@@ -35,6 +35,7 @@ class EasyPostUtils():
 			frappe.throw(_("Please enable EasyPost Integration in {0}").format(link))
 
 	def get_available_services(self,
+		shipment_doc,
 		delivery_address,
 		delivery_contact,
 		shipment_parcel,
@@ -46,6 +47,10 @@ class EasyPostUtils():
 		if not self.enabled or not self.api_key:
 			return []
 		
+		shipment = frappe.get_doc('Shipment', shipment_doc)
+		origin_country_name = frappe.db.get_single_value("Shipping Settings", "country_of_origin")
+		origin_country_code = frappe.db.get_value("Country", origin_country_name, "code") if origin_country_name else pickup_address.country
+
 		# convert the measurements from metric to English
 		parcel = self.convert_parcel_measurements(
 			{
@@ -57,7 +62,7 @@ class EasyPostUtils():
 		)
 
 		# create a shipment object
-		shipment = {
+		ep_shipment = {
 			'to_address': {
 				'name': "{} {}".format(delivery_contact.first_name, delivery_contact.last_name),
 				'street1': delivery_address.address_line1,
@@ -85,22 +90,41 @@ class EasyPostUtils():
 		}
 
 		if delivery_contact.email_id is not None:
-   			shipment['to_address']['email'] = delivery_contact.email_id
+			ep_shipment['to_address']['email'] = delivery_contact.email_id
 
 		if pickup_contact.email_id is not None:
-   			shipment['to_address']['email'] = pickup_contact.email_id
+			ep_shipment['from_address']['email'] = pickup_contact.email_id
+
+		if delivery_address.country_code.lower() != pickup_address.country_code.lower():
+			customs_items_list = []
+			for item in shipment.customs_items:
+				customs_items_list.append({
+					'description': item.description,
+					'quantity': item.qty,
+					'weight': item.weight * 35.27396195,
+					'value': item.value,
+					'hs_tariff_number': item.hs_tariff_number,
+					'origin_country': origin_country_code
+				})
+
+			ep_shipment['customs_info'] = {
+				'contents_type': shipment.contents_type,
+				'restriction_type': shipment.restriction_type,
+				'customs_certify': 'true',
+				'customs_signer': shipment.customs_signer_name,
+				'eel_pfc': shipment.eel_pfc,
+				'customs_items': customs_items_list
+			}
 
 		try:
 			response = requests.post(
 				"https://api.easypost.com/v2/shipments",
 				json={
-					"shipment": shipment,
+					"shipment": ep_shipment,
 				},
 				auth=(self.api_key, "")
 			)
 			response_dict = response.json()
-			# prepared = response.prepare()
-			# frappe.throw(str(response.request.body.decode()) if response.request.body else "No body")
 
 			if "error" in response_dict:
 				error_message = response_dict["error"]["message"]
