@@ -13,15 +13,16 @@
 				<tbody>
 					{% for (var i = 0; i < data.preferred_services.length; i++) { %}
 						<tr id="data-preferred-{{i}}">
-							<td class="service-info" style="width:20%;">{{ data.preferred_services[i].service_provider }}</td>
-							<td class="service-info" style="width:20%;">{{ data.preferred_services[i].carrier }}</td>
-							<td class="service-info" style="width:40%;">{{ data.preferred_services[i].service_name }}</td>
-							<td class="service-info" style="width:20%;">{{ format_currency(data.preferred_services[i].total_price, "EUR", 2) }}</td>
+							<td class="service-info" style="width:15%;">{{ data.preferred_services[i].service_provider }}</td>
+							<td class="service-info" style="width:15%;">{{ data.preferred_services[i].carrier }}</td>
+							<td class="service-info" style="width:35%;">{{ data.preferred_services[i].service_name }}</td>
+							<td class="service-info" style="width:10%;">{{ data.preferred_services[i].delivery_days || "" }}</td>
+							<td class="service-info" style="width:15%;">{{ format_currency(data.preferred_services[i].total_price, rates_currency, 2) }}</td>
 							<td style="width:10%;vertical-align: middle;">
 								<button
 									data-type="preferred_services"
 									id="data-preferred-{{i}}" type="button" class="btn">
-									{{ __("Select") }}
+									{{ __("Buy") }}
 								</button>
 							</td>
 						</tr>
@@ -48,15 +49,16 @@
 				<tbody>
 					{% for (var i = 0; i < data.other_services.length; i++) { %}
 						<tr id="data-other-{{i}}">
-							<td class="service-info" style="width:20%;">{{ data.other_services[i].service_provider }}</td>
-							<td class="service-info" style="width:20%;">{{ data.other_services[i].carrier }}</td>
-							<td class="service-info" style="width:40%;">{{ data.other_services[i].service_name }}</td>
-							<td class="service-info" style="width:20%;">{{ format_currency(data.other_services[i].total_price, "EUR", 2) }}</td>
+							<td class="service-info" style="width:15%;">{{ data.other_services[i].service_provider }}</td>
+							<td class="service-info" style="width:15%;">{{ data.other_services[i].carrier }}</td>
+							<td class="service-info" style="width:35%;">{{ data.other_services[i].service_name }}</td>
+							<td class="service-info" style="width:10%;">{{ data.other_services[i].delivery_days || "" }}</td>
+							<td class="service-info" style="width:15%;">{{ format_currency(data.other_services[i].total_price, rates_currency, 2) }}</td>
 							<td style="width:10%;vertical-align: middle;">
 								<button
 									data-type="other_services"
 									id="data-other-{{i}}" type="button" class="btn">
-									{{ __("Select") }}
+									{{ __("Buy") }}
 								</button>
 							</td>
 						</tr>
