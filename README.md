@@ -1,49 +1,93 @@
-## ERPNext Shipping
+# ERPNext Shipping Integration
 
-A Shipping Integration for ERPNext with various platforms. Platforms integrated in this app are:
+A USA-focused shipping integration for ERPNext using EasyPost (with UPS, USPS & FedEx support).  
 
-- [LetMeShip](https://www.letmeship.com/en/)
-- [SendCloud](https://www.sendcloud.com/home-new/)
+> **Prerequisites**  
+> - An EasyPost API key  
+> - A UPS Developer account with a “Rating” & “Shipping” app (https://developer.ups.com)  
 
-> [!TIP]
-> Please make sure to get your API access enabled first, by contacting the LetMeShip support.
+---
 
-## Features
-- Creation of shipment to a carrier service (e.g. FedEx, UPS) via LetMeShip and SendCloud. 
-- Compare shipping rates. 
-- Printing the shipping label is also made available within the Shipment doctype.
-- Templates for the parcel dimensions.
-- Shipment tracking.
+## 🚀 Features
 
-## Installation
+- **Rate Comparison**  
+  Fetch and compare live shipping rates from multiple carriers (UPS, USPS, FedEx) via EasyPost.  
+- **Preferred Services**  
+  Mark your most‐used carrier-service combinations and surface them at the top.  
+- **One-Click Shipment Creation**  
+  Create an ERPNext Shipment record and an EasyPost shipment in one step.  
+- **Label Printing**  
+  • **Local**: Opens the PDF in a new tab for your browser’s print dialog  
+  • **Network**: Send labels directly to a CUPS printer on your network  
+- **Dimension Templates**  
+  Save and reuse common box or pallet dimensions.  
+- **Tracking & Status**  
+  Automatically pull tracking numbers into the Shipment record.  
 
-Install [on Frappe Cloud](https://frappecloud.com/marketplace/apps/shipping) or your own server:
+---
 
+## 🔌 Integrations
+
+- **Fully Tested**  
+  - EasyPost (https://www.easypost.com)  
+    - Supports FedEx third-party billing via your FedEx account credentials  
+    - **Note:** UPS third-party billing is _not_ supported through EasyPost—UPS labels must be created with direct UPS API calls.  
+- **Self-hosted Connector**  
+  - `ups_direct.py`  
+    - Direct UPS integration  
+    - **Add your UPS credentials** (Access Key, User ID, Password) into the `ups_direct.py` config section  
+- **Planned / Untested**  
+  - LetMeShip (https://www.letmeship.com)  
+  - SendCloud (https://www.sendcloud.com)  
+
+---
+
+## 📦 Installation
+
+### 1. Frappe Cloud  
+Install directly from the [Frappe Cloud Marketplace](https://frappecloud.com/marketplace/apps/shipping).
+
+### 2. Self-Hosted Bench  
 ```bash
-cd ~/frappe-bench
-bench get-app https://github.com/frappe/erpnext-shipping.git --branch version-14
-bench --site $MY_SITE install-app erpnext_shipping
-```
+# From your bench directory
+bench get-app https://github.com/your-org/erpnext_shipping.git
+bench --site [your-site] install-app erpnext_shipping
+bench build
+bench restart
 
-## Setup
+⚙️ Configuration
+Shipping Settings
 
-Some shipping providers require the contact details of the pickup contact. Please make sure that the **User** selected as the _Pickup Contact Person_ has a first name, last name, email address, and phone number before submitting the **Shipment**.
+Navigate to Home > Settings > Shipping Settings
 
-For the 'compare shipping rates' feature to work as expected, you need to generate an API key from your service provider. Service providers have their own specific doctypes similar to those from the `Integrations`. They can be enabled or disabled depending on your needs.
+Enter your EasyPost API key, default network printer, and any preferred services.
 
-![LetMeShip 2020-08-05 09-54-28](https://user-images.githubusercontent.com/17470909/89377411-500c4f80-d724-11ea-8fe5-b11fec2a5c27.png)
+UPS Direct Credentials
 
-### Fetch Shipping Rates
-![core2](https://user-images.githubusercontent.com/17470909/89377460-70d4a500-d724-11ea-8550-a2813b936651.gif)
+Edit erpnext_shipping/erpnext_shipping/integrations/ups_direct.py
 
-You can see the list of shipping rates by clicking the `Fetch Shipping Rates` button. Once you picked a rate, it will create the shipment for you. 
+Populate your UPS Access Key, Username, and Password in the top-of-file configuration section.
 
-### Shipping Label
-![71bcfc9d-9d66-4a58-8238-1eeab4e9a24f 2020-08-05 09-48-32](https://user-images.githubusercontent.com/17470909/89377478-78944980-d724-11ea-8120-a5374c6e4c5e.png)
+Carrier Billing
 
-The service provider will also provide the shipping label and to generate the label, click on the `Print Shipping Label` on top of the doctype.
+FedEx (via EasyPost)
 
------------------------
-#### License
+Can use FedEx third-party billing: configure your FedEx account details under the EasyPost credentials.
 
-MIT
+UPS
+
+Third-party billing not available via EasyPost—must use the UPS direct connector above.
+
+User Contact
+
+Ensure the Pickup Contact Person on each Shipment has a first name, last name, email, and phone.
+
+📑 Usage
+Fetch Shipping Rates
+Open a Shipment (submitted, but not booked).
+
+Click Fetch Shipping Rates.
+
+Compare rates in the dialog (preferred services appear first).
+
+Click Buy to book that service and create the shipment.
