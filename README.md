@@ -30,12 +30,12 @@ A USA-focused shipping integration for ERPNext using EasyPost (with UPS, USPS & 
 
 - **Fully Tested**  
   - EasyPost (https://www.easypost.com)  
-    - Supports FedEx third-party billing via your FedEx account credentials  
-    - **Note:** UPS third-party billing is _not_ supported through EasyPost—UPS labels must be created with direct UPS API calls.  
+    - Supports Standard UPS, FedEx & USPS shipping, FedEx third-party billing via EasyPost API & UPS 3rd Party Billing through user's UPS account
+    - **Note:** UPS third-party billing is _not_ supported through EasyPost. UPS labels must be created with direct UPS API calls.
 - **Self-hosted Connector**  
   - `ups_direct.py`  
     - Direct UPS integration  
-    - **Add your UPS credentials** (Access Key, User ID, Password) into the `ups_direct.py` config section  
+    - **Add your UPS credentials** (Access Key, User ID, UPS account number) into the (top) of `ups_direct.py` config section
 - **Planned / Untested**  
   - LetMeShip (https://www.letmeship.com)  
   - SendCloud (https://www.sendcloud.com)  
@@ -91,3 +91,21 @@ Click Fetch Shipping Rates.
 Compare rates in the dialog (preferred services appear first).
 
 Click Buy to book that service and create the shipment.
+
+Print Shipping Label
+Print Shipping Label: Opens the carrier-provided PDF or PNG in a new tab for your local printer.
+Network Print: Sends the PDF or PNG to your configured CUPS printer automatically.
+
+🛠️ Development
+Templates live under erpnext_shipping/public/templates/
+
+Client script: erpnext_shipping/public/js/shipment.js
+
+EasyPost integration: erpnext_shipping/erpnext_shipping/integrations/easypost.py
+
+UPS direct integration: erpnext_shipping/erpnext_shipping/integrations/ups_direct.py
+
+Run bench build && bench restart after making changes.
+
+📄 License
+MIT
