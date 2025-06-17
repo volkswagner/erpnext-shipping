@@ -4,7 +4,13 @@ A USA-focused shipping integration for ERPNext using EasyPost (with UPS, USPS & 
 
 > **Prerequisites**  
 > - An EasyPost API key  
-> - A UPS Developer account with a “Rating” & “Shipping” app (https://developer.ups.com)  
+> - A UPS Developer app with “Rating” & “Shipping” privlidges (https://developer.ups.com) 
+> - Add 5 custom fileds to shipment doc called:
+> - --custom_ship_on_third_party (Check) in list view
+> - --custom_third_party_account (Data) depends on eval:doc.custom_ship_on_third_party;
+> - --custom_third_party_postal (Data) depends on eval:doc.custom_ship_on_third_party;
+> - --custom_shipping_label (Data) hidden
+> - --custom_postage_label (Text) hidden
 
 ---
 
