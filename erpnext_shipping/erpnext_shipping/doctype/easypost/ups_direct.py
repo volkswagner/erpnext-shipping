@@ -1,6 +1,7 @@
 # apps/erpnext_shipping/erpnext_shipping/utils/ups_direct.py
 import requests, json, datetime, uuid
 import frappe
+import re
 from requests.exceptions import HTTPError
 
 # --- HARD-CODED creds for POC ---
@@ -13,6 +14,12 @@ UPS_BASE_URL   = "https://wwwcie.ups.com"          # ← add this constant
 UPS_OAUTH_URL  = f"{UPS_BASE_URL}/security/v1/oauth/token"
 UPS_RATE_URL = f"{UPS_BASE_URL}/api/rating/v2205/Shop"   # <— path param
 UPS_SHIP_URL   = f"{UPS_BASE_URL}/api/shipments/v1/ship"
+
+def build_parcel_list(rows):
+    parcels = []
+    for p in rows:
+        parcels.append(p.copy())      # rows are already dicts here
+    return parcels
 
 class UPSDirect:
     def __init__(self):
@@ -102,6 +109,17 @@ class UPSDirect:
             }
         }
 
+    def _phone(self, raw: str | None) -> dict | None:
+        """
+        Return {"Phone": {"Number": "7147798794"}}  or  None.
+        UPS wants 10–15 digits, no punctuation.
+        """
+        if not raw:
+            return None
+        num = re.sub(r"\D", "", raw)[:15]
+        if len(num) < 10:        # UPS rejects shorter numbers
+            return None
+        return {"Phone": {"Number": num}}
 
     def _package(self, parcel):
         """
@@ -130,7 +148,7 @@ class UPSDirect:
 
 
     # ---------- rate ----------
-    def rate(self, shipper_num, bill_acct, bill_zip, to_addr, from_addr, parcel):
+    def rate(self, shipper_num, bill_acct, bill_zip, to_addr, from_addr, parcels):
         body = {
             "RateRequest": {
                  "Request": {
@@ -150,7 +168,7 @@ class UPSDirect:
                     },
                     "ShipFrom": self._address(from_addr),
                     "ShipTo":   self._address(to_addr),
-                    "Package": [ self._package(parcel) ]   # ← Pascal-case
+                    "Package": [self._package(p) for p in parcels]
                 }
             }
         }
@@ -177,9 +195,9 @@ class UPSDirect:
 
 
     # ---------- ship / buy ----------
-    def ship(self, shipper_num, bill_acct, bill_zip, to_addr, from_addr, parcel, service_code):
+    def ship(self, shipper_num, bill_acct, bill_zip, to_addr, from_addr, parcels, service_code):
         today = datetime.date.today().strftime("%Y%m%d")      
-
+        
         if bill_acct and bill_acct.strip() != shipper_num:
             # third-party billing
             payer_block = {
@@ -212,7 +230,7 @@ class UPSDirect:
                     "PaymentInformation": {
                         "ShipmentCharge": [payer_block]
                     },
-                    "Package": [self._package(parcel)],
+                    "Package": [self._package(p) for p in parcels],
                     "ShipmentDate": today,
                 },
                 "LabelSpecification": {
@@ -248,26 +266,33 @@ class UPSDirect:
         # label looks nicer with a contact name too
         if addr.get("name"):
             block["AttentionName"] = addr["name"]
+            
+        phone_block = self._phone(addr.get("phone"))
+        if phone_block:
+            block.update(phone_block)
+        
         return block
 
 
     def _party(self, person_or_co: str, addr: dict) -> dict:
-        """
-        Build a ShipFrom / ShipTo object.
-
-        If you pass a business name put it in CompanyName **and** duplicate it
-        into AttentionName;  
-        if it’s an individual pass it only as Name.
-        """
-        if addr.get("company"):                      # commercial address
-            return {
-                "CompanyName": person_or_co,
+        # Base block
+        if addr.get("company"):  # commercial address
+            block = {
+                "CompanyName":   person_or_co,
+                "AttentionName": person_or_co,
+                "Address":       self._address(addr)["Address"],
+            }
+        else:  # residential / individual – UPS wants Name
+            block = {
+                "Name":    person_or_co,
                 "AttentionName": person_or_co,
                 "Address": self._address(addr)["Address"],
             }
-        # residential / individual ­– UPS wants Name
-        return {
-            "Name": person_or_co,
-            "Address": self._address(addr)["Address"],
-        }
+
+        # Inject phone when valid
+        phone_block = self._phone(addr.get("phone"))
+        if phone_block:
+            block.update(phone_block)
+
+        return block
 
