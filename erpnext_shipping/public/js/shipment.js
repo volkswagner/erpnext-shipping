@@ -5,18 +5,7 @@ frappe.ui.form.on("Shipment", {
 	refresh: function (frm) {
 		if (frm.doc.docstatus === 1 && !frm.doc.shipment_id) {
 			frm.add_custom_button(__("Fetch Shipping Rates"), function () {
-				if (frm.doc.shipment_parcel.length > 1) {
-					frappe.confirm(
-						__(
-							"If your shipment contains packages with varying weights, the estimated shipping rates may differ from the final price charged by your carrier. Do you wish to proceed?"
-						),
-						function () {
-							frm.events.fetch_shipping_rates(frm);
-						}
-					);
-				} else {
-					frm.events.fetch_shipping_rates(frm);
-				}
+				frm.events.fetch_shipping_rates(frm);
 			});
 		}
 
@@ -368,26 +357,8 @@ frappe.ui.form.on("Shipment", {
 			frappe.throw(message)
 		}
 
-		async function show_parcel_count_warning(m) {
-			if (shipping_settings.flag_multiple_parcels) {
-				let prompt = new Promise((resolve, reject) => {
-					frappe.confirm(
-						`The shipment has <b>${frm.doc.shipment_parcel.length}</b> parcels.\n EasyPost will not appear in the rates table as it does not support multiple parcels. Continue anyways?</b>`,
-						() => resolve(),
-						() => reject()
-					);
-				});
-				await prompt.then(
-					() => frappe.show_alert("Shipment successfully submitted.", 5), 
-					() => {
-						frappe.validated = false
-						frappe.show_alert("Shipment submission cancelled.", 5)
-					}
-				);
-			}
-			else {
-				frm.save('Submit')
-			}
+		async function show_parcel_count_warning() {
+			frm.save('Submit');
 		}
 
 		async function verify_address() {
