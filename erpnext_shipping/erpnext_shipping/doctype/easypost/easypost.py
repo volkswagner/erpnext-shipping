@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Frappe and contributors
 # For license information, please see license.txt
 #frappe.log_error(title="Bill_3p 2", message=f"bill_3p: {bill_3p}, clean_acct: {acct_3p}")
+#/apps/erpnext_shipping/erpnext_shipping/erpnext_shipping/doctype/easypost
 import json
 import base64
 import io
@@ -20,8 +21,8 @@ from requests.exceptions import HTTPError
 
 from erpnext_shipping.erpnext_shipping.utils import show_error_alert
 
-# UPS‑Direct imports -----------------------------------------------------------
-from .ups_direct import UPSDirect, UPS_SHIPPER_NUM
+# UPS-Direct imports -----------------------------------------------------------
+from .ups_direct import UPSDirect
 
 EASYPOST_PROVIDER = "EasyPost"
 
@@ -67,7 +68,8 @@ class EasyPostUtils:
     # ──────────────────────────────────────────────────────────────────────
     _DISPLAY_MAP = {
         # ---- Carrier aliases the rest of the code expects ----
-        "FEDEXDEFAULT": "FedEx",
+        "FEDEXDEFAULT": "FedEx (Easy Post)",
+        "FEDEX":        "FedEx (Case Club)",
         "UPSDAP":       "UPS",
         "USPS":         "USPS",
         # ---- Service renames (add / edit as you like) ----
@@ -132,8 +134,8 @@ class EasyPostUtils:
             ship_doc.get("custom_ship_on_third_party") in (1, "1", True, "Yes")
             and bool(ship_doc.get("custom_third_party_account"))
         )
-        acct_3p  = ship_doc.custom_third_party_account
-        clean_acct = re.sub(r"[^A-Za-z0-9]", "", acct_3p)
+        acct_3p     = ship_doc.custom_third_party_account          # may be None
+        clean_acct  = re.sub(r"[^A-Za-z0-9]", "", acct_3p or "")
         zip_3p   = ship_doc.custom_third_party_postal
         
         if bill_3p and len(clean_acct) == 6:          
@@ -164,7 +166,7 @@ class EasyPostUtils:
                 "state":   delivery_address.state,
                 "zip":     delivery_address.pincode,
                 "country": delivery_address.country,
-                "phone":   delivery_contact.phone,
+                "phone":   self._phone(delivery_contact, delivery_address),
             },
             "from_address": {
                 "name":    f"{pickup_contact.first_name} {pickup_contact.last_name}",
@@ -174,7 +176,7 @@ class EasyPostUtils:
                 "state":   pickup_address.state,
                 "zip":     pickup_address.pincode,
                 "country": pickup_address.country,
-                "phone":   pickup_contact.phone,
+                "phone":   self._phone(pickup_contact, pickup_address),
             },
             **parcel_block,           # ← single or multi‑piece
             "options": {
@@ -221,6 +223,8 @@ class EasyPostUtils:
                     is_order=mps
                 )
                 available_services.append(available_service)
+            
+            #frappe.log_error(title="available_services from easypost", message=f"{available_services}")
 
             # ─────────────────────────────────────────────────────────────
             # UPSDirect integration for third‑party UPS billing (single‑parcel)
@@ -230,7 +234,7 @@ class EasyPostUtils:
                 ups = UPSDirect()
                 try:
                     ups_rates = ups.rate(
-                        UPS_SHIPPER_NUM,
+                        ups.ups_shipper_num,
                         clean_acct,
                         zip_3p.strip(),
                         shipment["to_address"],
@@ -260,7 +264,7 @@ class EasyPostUtils:
                                 "delivery_days":    rated.get("GuaranteedDaysToDelivery"),
                                 "service_id":       code,
                                 "shipment_id":      None,
-                                "ups_shipper_number": UPS_SHIPPER_NUM,
+                                "ups_shipper_number": ups.ups_shipper_num,
                                 "ups_account":        clean_acct,
                                 "ups_postal_code":    zip_3p.strip(),
                                 "to_address":         shipment["to_address"],
@@ -736,3 +740,25 @@ class EasyPostUtils:
         r = requests.get(url, timeout=20)
         r.raise_for_status()
         return Image.open(io.BytesIO(r.content)).convert("RGB")
+    
+    # ─────────────────────────────────────────────
+    # Helper: always return a non-blank phone string
+    # ─────────────────────────────────────────────
+    def _phone(self, contact, address) -> str:
+        """
+        FedEx's REST API will error if `phone` is missing or null.
+        Priority:
+          1) contact.phone
+          2) address.phone  (Address DocType has an optional phone field)
+          3) Company default phone (Settings → Company)
+          4) hard-coded fallback so test mode never blows up
+        """
+        return (
+            (getattr(contact, "phone", "") or "").strip()
+            or (getattr(address, "phone", "") or "").strip()
+            or frappe.db.get_single_value("Company", "phone_no")  # may be None
+            or "714-555-0000"     # ← safe dummy; change to whatever you like
+        )
+
+
+
