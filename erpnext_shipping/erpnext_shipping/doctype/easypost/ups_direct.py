@@ -23,9 +23,14 @@ def _get_ups_creds():
     return client_id, secret, shipper
 
 # Endpoints (test vs prod)
-UPS_BASE_URL   = "https://wwwcie.ups.com"          # ← add this constant
+def _get_ups_base_url():
+    docname = "EasyPost"
+    use_test = frappe.db.get_single_value(docname, "use_test_environment")
+    return "https://wwwcie.ups.com" if use_test else "https://onlinetools.ups.com"
+
+UPS_BASE_URL   = _get_ups_base_url()
 UPS_OAUTH_URL  = f"{UPS_BASE_URL}/security/v1/oauth/token"
-UPS_RATE_URL = f"{UPS_BASE_URL}/api/rating/v2205/Shop"   # <— path param
+UPS_RATE_URL = f"{UPS_BASE_URL}/api/rating/v2205/Shop"
 UPS_SHIP_URL   = f"{UPS_BASE_URL}/api/shipments/v1/ship"
 
 def build_parcel_list(rows):
@@ -310,4 +315,3 @@ class UPSDirect:
             block.update(phone_block)
 
         return block
-
