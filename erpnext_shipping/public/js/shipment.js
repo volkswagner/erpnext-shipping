@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Shipment", {
 	load: async function (frm) {
-		toggle_customs_info(frm)
+		toggle_customs_info(frm);
 	},
 
 	refresh: async function (frm) {
@@ -40,8 +40,7 @@ frappe.ui.form.on("Shipment", {
 				function () {
 					net_print_shipping_label(frm.doc.name)
 				},
-			
-					__("Tools")
+				__("Tools")
 			);
 			if (frm.doc.tracking_status != "Delivered") {
 				frm.add_custom_button(
@@ -75,17 +74,15 @@ frappe.ui.form.on("Shipment", {
 			}
 		}
 
-		if (frm.doc.status === "Booked" || frm.doc.status === "Completed") {
+		if (frm.doc.status === "Booked") {
     		frm.add_custom_button(
-    		    "Create Sales Invoice", 
+    		    __("Create Sales Invoice"), 
     		    function() {
 					frappe.call({
 						method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.check_settings_if_complete",
 						freeze: true,
-						freeze_message: "Checking Setttings",
+						freeze_message: __("Checking Setttings"),
 						callback: function(r) {
-							console.log(frm.doc.shipment_delivery_note[0].delivery_note)
-							console.log(frm.doc.name)
 							if (!r.exc) {
 								if (frm.doc.shipment_delivery_note) {
 									frappe.call({
@@ -107,16 +104,16 @@ frappe.ui.form.on("Shipment", {
 														pickup_type: frm.doc.pickup_type
 													},
 													...r.message
-												]
-												let shipment_cost = frm.doc.shipment_amount
-												let additional_fields = []
-												let dialog_size = 'small'
-												let shipment_cost_label = 'Shipment Cost'
-												let shipment_list = []
+												];
+												let shipment_cost = frm.doc.shipment_amount;
+												let additional_fields = [];
+												let dialog_size = 'small';
+												let shipment_cost_label = __('Shipment Cost');
+												let shipment_list = [];
 
 												if (shipments.length > 1) {
-													dialog_size = 'large'
-													shipment_cost_label = 'Total Shipment Cost'
+													dialog_size = 'large';
+													shipment_cost_label = __('Total Shipment Cost');
 													additional_fields =  [
 														{
 															fieldtype: 'Section Break'
@@ -195,7 +192,7 @@ frappe.ui.form.on("Shipment", {
 															fieldtype: 'Column Break',
 															fieldname: 'shipping_cost_column'  // Start first column
 														},
-													]
+													];
 												}
 
 												let shipping_cost_dialog = new frappe.ui.Dialog({
@@ -217,7 +214,7 @@ frappe.ui.form.on("Shipment", {
 														}
 													],
 													size: dialog_size,
-													primary_action_label: 'Proceed',
+													primary_action_label: __('Proceed'),
 													primary_action: function (values) {
 														frappe.model.open_mapped_doc({
 															method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.make_sales_invoice_from_shipment",
@@ -228,63 +225,62 @@ frappe.ui.form.on("Shipment", {
 																shipments: shipment_list
 															},
 															freeze: true,
-															freeze_message: "Creating New Sales Invoice",
+															freeze_message: __("Creating New Sales Invoice"),
 														})
 													}
 												})
 
 												if (shipments.length > 1) {
-													shipping_cost_dialog.$wrapper.find('.modal-dialog').attr('id', 'shipping-cost-modal')
-													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="__column_1"]').addClass('col-md-9')
-													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="shipping_cost_column"]').addClass('col-md-3')
-													shipping_cost_dialog.$wrapper.find('.panel-title').hide()
-													shipping_cost_dialog.$wrapper.find('use[href="#icon-down"]').attr('href', '#icon-up')
-													shipping_cost_dialog.$wrapper.find('use[href="#icon-edit"]').attr('href', '#icon-down')
+													shipping_cost_dialog.$wrapper.find('.modal-dialog').attr('id', 'shipping-cost-modal');
+													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="__column_1"]').addClass('col-md-9');
+													shipping_cost_dialog.$wrapper.find('.form-column[data-fieldname="shipping_cost_column"]').addClass('col-md-3');
+													shipping_cost_dialog.$wrapper.find('.panel-title').hide();
+													shipping_cost_dialog.$wrapper.find('use[href="#icon-down"]').attr('href', '#icon-up');
+													shipping_cost_dialog.$wrapper.find('use[href="#icon-edit"]').attr('href', '#icon-down');
 													shipping_cost_dialog.$wrapper.find('div[data-fieldname="related_shipments"] .grid-row input[type="checkbox"]').on('change', function () {
-														let table_data = shipping_cost_dialog.get_value('related_shipments')
-														let selected_shipments = table_data.filter(row => row.__checked)
-														let shipment_sum = selected_shipments.reduce((sum, shipment) => sum + shipment.shipment_amount, 0)
-														shipment_list = selected_shipments.map(shipment => shipment.name)
-														shipping_cost_dialog.set_value('shipment_cost', shipment_sum)
-													})
+														let table_data = shipping_cost_dialog.get_value('related_shipments');
+														let selected_shipments = table_data.filter(row => row.__checked);
+														let shipment_sum = selected_shipments.reduce((sum, shipment) => sum + shipment.shipment_amount, 0);
+														shipment_list = selected_shipments.map(shipment => shipment.name);
+														shipping_cost_dialog.set_value('shipment_cost', shipment_sum);
+													});
 												}
 												
-												shipping_cost_dialog.show()
+												shipping_cost_dialog.show();
 											}
 										}
 									})
 								}
 								else {
 									frappe.msgprint({
-										title: "Can't Create Sales Invoice",
+										title: __("Can't Create Sales Invoice"),
 										indicator: "orange",
-										message: "The shipment doesn't have a delivery note associated with it."
+										message: __("The shipment doesn't have a delivery note associated with it.")
 									});
 								}
 							}
 						}
 					})
     		    }
-    		)
+    		);
 	    }
 
 		if (frm.is_new()) {
-			let shipping_settings = await get_shipping_settings()
-			console.log(shipping_settings)
+			let shipping_settings = await get_shipping_settings();
 
-			if (shipping_settings.default_customs_signer) frm.set_value('customs_signer', shipping_settings.default_customs_signer)
-			if (shipping_settings.default_eel_pfc) frm.set_value('eel_pfc', shipping_settings.default_eel_pfc)
+			if (shipping_settings.default_customs_signer) frm.set_value('customs_signer', shipping_settings.default_customs_signer);
+			if (shipping_settings.default_eel_pfc) frm.set_value('eel_pfc', shipping_settings.default_eel_pfc);
 		}
 
-		toggle_customs_info(frm)
+		toggle_customs_info(frm);
 	},
 
 	pickup_address_name: function (frm) {
-		toggle_customs_info(frm)
+		toggle_customs_info(frm);
 	},
 
 	delivery_address_name: function (frm) {
-		toggle_customs_info(frm)
+		toggle_customs_info(frm);
 	},
 
 	fetch_shipping_rates: function (frm) {
@@ -370,14 +366,14 @@ frappe.ui.form.on("Shipment", {
 				freeze_message: __('Pulling Item from Parcel'),
 				callback: function(r) {
 					if (r.message) {
-						let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items')
-						customs_item_entry.description = r.message[0].description
-						customs_item_entry.qty = r.message[0].qty
-						customs_item_entry.weight = r.message[0].weight
-						customs_item_entry.value = r.message[0].value
-						customs_item_entry.hs_tariff_number = r.message[0].hs_tariff_number
-						frm.refresh_field('customs_items')
-						frm.dirty()
+						let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items');
+						customs_item_entry.description = r.message[0].description;
+						customs_item_entry.qty = r.message[0].qty;
+						customs_item_entry.weight = r.message[0].weight;
+						customs_item_entry.value = r.message[0].value;
+						customs_item_entry.hs_tariff_number = r.message[0].hs_tariff_number;
+						frm.refresh_field('customs_items');
+						frm.dirty();
 					}
 	
 				}
@@ -411,16 +407,16 @@ frappe.ui.form.on("Shipment", {
 						let customs_items_list = r.message
 	
 						customs_items_list.forEach(function (customs_item) {
-							let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items')
-							customs_item_entry.description = customs_item.description
-							customs_item_entry.qty = customs_item.qty
-							customs_item_entry.weight = customs_item.weight
-							customs_item_entry.value = customs_item.value
-							customs_item_entry.hs_tariff_number = customs_item.hs_tariff_number
-							customs_item_entry.referenced_item = customs_item.referenced_item
-							frm.refresh_field('customs_items')
-							frm.dirty()
-						})
+							let customs_item_entry = frappe.model.add_child(frm.doc, 'Customs Items List', 'customs_items');
+							customs_item_entry.description = customs_item.description;
+							customs_item_entry.qty = customs_item.qty;
+							customs_item_entry.weight = customs_item.weight;
+							customs_item_entry.value = customs_item.value;
+							customs_item_entry.hs_tariff_number = customs_item.hs_tariff_number;
+							customs_item_entry.referenced_item = customs_item.referenced_item;
+							frm.refresh_field('customs_items');
+							frm.dirty();
+						});
 					}
 	
 				}
@@ -454,30 +450,30 @@ frappe.ui.form.on("Shipment", {
 	},
 
 	before_submit: async (frm) => {
-		let shipping_settings = await get_shipping_settings()
+		let shipping_settings = await get_shipping_settings();
 		function show_rates_error(message) {
-			frappe.throw(message)
+			frappe.throw(message);
 		}
 
 		async function show_parcel_count_warning(m) {
 			if (shipping_settings.flag_multiple_parcels) {
 				let prompt = new Promise((resolve, reject) => {
 					frappe.confirm(
-						`The shipment has <b>${frm.doc.shipment_parcel.length}</b> parcels.\n EasyPost will not appear in the rates table as it does not support multiple parcels. Continue anyways?</b>`,
+						__(`The shipment has <b>${frm.doc.shipment_parcel.length}</b> parcels.\n EasyPost will not appear in the rates table as it does not support multiple parcels. Continue anyways?</b>`),
 						() => resolve(),
 						() => reject()
 					);
 				});
 				await prompt.then(
-					() => frappe.show_alert("Shipment successfully submitted.", 5), 
+					() => frappe.show_alert(__("Shipment successfully submitted."), 5), 
 					() => {
 						frappe.validated = false
-						frappe.show_alert("Shipment submission cancelled.", 5)
+						frappe.show_alert(__("Shipment submission cancelled."), 5)
 					}
 				);
 			}
 			else {
-				frm.save('Submit')
+				frm.save('Submit');
 			}
 		}
 
@@ -493,7 +489,7 @@ frappe.ui.form.on("Shipment", {
 				{
 					fieldtype: "Check",
 					fieldname: "mark_as_verified",
-					label: "Mark as verified",
+					label: __("Mark as verified"),
 					default: 0
 				}
 			]
@@ -506,7 +502,7 @@ frappe.ui.form.on("Shipment", {
 							freeze_message: __(freeze_message),
 						}
 					:
-						{}
+						{};
 				frappe.call({
 					method: "erpnext_shipping.erpnext_shipping.doctype.shipping_settings.shipping_settings.update_address",
 					args: {
@@ -515,7 +511,7 @@ frappe.ui.form.on("Shipment", {
 						do_verify_address: verify_address
 					},
 					...freeze_options
-				})
+				});
 			}
 
 			if (shipping_settings.verify_address) {
@@ -527,7 +523,7 @@ frappe.ui.form.on("Shipment", {
 						},
 						callback: function(r) {
 							if(r.message && r.message.result === "Mismatched") {
-								frappe.validated = false
+								frappe.validated = false;
 								const mismatch_dialog = new frappe.ui.Dialog({
 									title: __("Address Mismatch Found"),
 									size: "medium",
@@ -536,21 +532,21 @@ frappe.ui.form.on("Shipment", {
 										{
 											fieldtype: "HTML",
 											fieldname: "message",
-											options: r.message.notes + "<br/><br/>",
+											options: __(r.message.notes + "<br/><br/>"),
 										},
 										...addition_dialog_fields
 									],
 									primary_action_label: __("Submit Anyway"),
 									primary_action: (values) => {
 										if (values.mark_as_verified) {
-											update_address({"is_verified": 1}, false)
+											update_address({"is_verified": 1}, false);
 										}
-										frm.save('Submit')
-										mismatch_dialog.hide()
+										frm.save('Submit');
+										mismatch_dialog.hide();
 									},
-								})
+								});
 	
-								mismatch_dialog.set_secondary_action_label(__("Fix Address"))
+								mismatch_dialog.set_secondary_action_label(__("Fix Address"));
 								mismatch_dialog.set_secondary_action(() => {
 									update_address(r.message.data, true, "Fixing Address")
 									frm.set_value('delivery_address_name', '')
@@ -558,15 +554,15 @@ frappe.ui.form.on("Shipment", {
 										frm.set_value('delivery_address_name', address_name)
 										frm.save()
 										frm.scroll_to_field('delivery_address')
-									} , 1500)
-									mismatch_dialog.hide()
-								})
+									} , 1500);
+									mismatch_dialog.hide();
+								});
 		
-								mismatch_dialog.show()
-								mismatch_dialog.$wrapper.find('div[data-fieldname="mark_as_verified"]').appendTo(mismatch_dialog.$wrapper.find('div[id="mark-message"]'))
+								mismatch_dialog.show();
+								mismatch_dialog.$wrapper.find('div[data-fieldname="mark_as_verified"]').appendTo(mismatch_dialog.$wrapper.find('div[id="mark-message"]'));
 							}
 							else if(r.message && r.message.result === "Fail") {
-								frappe.validated = false
+								frappe.validated = false;
 								const fail_dialog = new frappe.ui.Dialog({
 									title: __("Address Not Found"),
 									size: "medium",
@@ -582,15 +578,15 @@ frappe.ui.form.on("Shipment", {
 									primary_action_label: __("Submit Anyway"),
 									primary_action: (values) => {
 										if (values.mark_as_verified) {
-											update_address({"is_verified": 1}, false)
+											update_address({"is_verified": 1}, false);
 										}
-										frm.save('Submit')
-										fail_dialog.hide()
+										frm.save('Submit');
+										fail_dialog.hide();
 									},
-								})
-								fail_dialog.show()
+								});
+								fail_dialog.show();
 
-								fail_dialog.$wrapper.find('div[data-fieldname="mark_as_verified"]').appendTo(fail_dialog.$wrapper.find('div[id="mark-message"]'))
+								fail_dialog.$wrapper.find('div[data-fieldname="mark_as_verified"]').appendTo(fail_dialog.$wrapper.find('div[id="mark-message"]'));
 							}
 						}
 				})
@@ -598,7 +594,7 @@ frappe.ui.form.on("Shipment", {
 			else {
 				let prompt = new Promise((resolve, reject) => {
 					frappe.confirm(
-						"The address isn't verified. Continue anyways?",
+						__("The address isn't verified. Continue anyways?"),
 						() => resolve(),
 						() => reject()
 					);
@@ -612,7 +608,7 @@ frappe.ui.form.on("Shipment", {
 						prompt.hide()
 						frappe.validated = false
 						frappe.show_alert({
-							message: "Shipment purchase was cancelled.",
+							message: __("Shipment purchase was cancelled."),
 							indicator: "red" 
 						}, 7)
 					}
@@ -639,34 +635,34 @@ frappe.ui.form.on("Shipment", {
 							indicator: "orange",
 							message: __(response.error_messages),
 							wide: true
-						})
+						});
 					}
 					else {
 						if (response.error_list.includes("currency_not_set")) {
-							show_rates_error(response.error_messages.currency_not_set)
+							show_rates_error(response.error_messages.currency_not_set);
 						}
 
 						if (response.error_list.includes("no_parcel")) {
-							frappe.throw(__(response.error_messages.no_parcel))
+							frappe.throw(__(response.error_messages.no_parcel));
 						}
 
 						if (response.error_list.includes("customs_items_unfulfilled")) {
-							frappe.throw(__(response.error_messages.customs_items_unfulfilled))
+							frappe.throw(__(response.error_messages.customs_items_unfulfilled));
 						}
 
 						if (response.error_list.includes("multiple_parcels")) {
-							show_parcel_count_warning()
+							show_parcel_count_warning();
 						}
 
 						if (response.error_list.includes("unverified_address")) {
-							verify_address()
+							verify_address();
 						}
 					}
 				}
 			}
 		})
 
-	}
+	},
 });
 
 async function get_shipping_settings() {
@@ -704,11 +700,11 @@ async function net_print_shipping_label(shipment_name) {
 
 	// Fetch Shipping settings to check for default_network_printer
 	// Mark changed Easypost to Shipping Settings
-	let shipping_settings = await get_shipping_settings()
+	let shipping_settings = await get_shipping_settings();
 
 	if (shipping_settings.default_network_printer) {
 		// Default printer exists, skip the dialog
-		print_label(shipping_settings.default_network_printer)
+		print_label(shipping_settings.default_network_printer);
 	} else {
 		// No default printer, show dialog to select printer
 		frappe.prompt(
@@ -722,7 +718,7 @@ async function net_print_shipping_label(shipment_name) {
 				},
 			],
 			function (values) {
-				print_label(values.printer_setting)
+				print_label(values.printer_setting);
 			},
 			__("Select Printer Setting"),
 			__("Print")
@@ -757,7 +753,7 @@ async function select_from_available_services(frm, available_services) {
 
 	const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
 
-	let shipping_settings = await get_shipping_settings()
+	let shipping_settings = await get_shipping_settings();
 
 	select_dialog.fields_dict.available_services.$wrapper.html(
 		frappe.render_template("shipment_service_selector", {
@@ -775,7 +771,6 @@ async function select_from_available_services(frm, available_services) {
 	});
 
 	frm.select_row = function (service_data) {
-
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.create_shipment",
 			freeze: true,
@@ -814,7 +809,7 @@ async function select_from_available_services(frm, available_services) {
 						r.message.service_provider,
 						r.message.shipment_id
 					);
-					net_print_shipping_label(frm.doc.name);
+					if(shipping_settings.auto_print_label) net_print_shipping_label(frm.doc.name);
 				}
 			},
 		});
@@ -845,19 +840,19 @@ async function check_if_international(frm) {
 }
 
 async function toggle_customs_info(frm) {
-	let customs_sections = ['customs_info_section', 'customs_actions_section', 'customs_items_section']
+	let customs_sections = ['customs_info_section', 'customs_actions_section', 'customs_items_section'];
 
-	let is_international = await check_if_international(frm)
+	let is_international = await check_if_international(frm);
 
 	customs_sections.forEach(function (section) {
-		frm.set_df_property(section, 'hidden', !is_international)
+		frm.set_df_property(section, 'hidden', !is_international);
 	})
 
 	if (frm.doc.docstatus === 1) {
-		frm.set_df_property(customs_sections[1], 'hidden', 1)
+		frm.set_df_property(customs_sections[1], 'hidden', 1);
 
 		if (frm.doc.customs_items.length === 0) {
-			frm.set_df_property(customs_sections[0], 'hidden', 1)
+			frm.set_df_property(customs_sections[0], 'hidden', 1);
 		}
 	}
 }

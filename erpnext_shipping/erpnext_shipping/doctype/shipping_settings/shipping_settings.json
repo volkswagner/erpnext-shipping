@@ -19,7 +19,6 @@
   "address_verification_tool",
   "label_and_print_settings_section",
   "default_network_printer",
-  "label_retention",
   "column_break_bfdc",
   "auto_print_label",
   "shipping_and_handling_settings_section",
@@ -93,13 +92,6 @@
    "label": "Automatically add shipping amount from Shipment to Sales Invoice"
   },
   {
-   "fieldname": "label_retention",
-   "fieldtype": "Int",
-   "label": "Label Retention (In Days)",
-   "length": 3,
-   "options": "60\n90\n180\n365"
-  },
-  {
    "default": "0",
    "depends_on": "eval: doc.default_network_printer",
    "fieldname": "auto_print_label",
@@ -118,7 +110,7 @@
    "fieldname": "address_verification_tool",
    "fieldtype": "Select",
    "label": "Address Verification Tool",
-   "options": "EasyPost\nUSPS\nUPS\nDHL"
+   "options": "EasyPost"
   },
   {
    "default": "USD",
@@ -186,7 +178,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-04-01 11:01:33.174438",
+ "modified": "2025-04-15 06:22:10.211921",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "Shipping Settings",

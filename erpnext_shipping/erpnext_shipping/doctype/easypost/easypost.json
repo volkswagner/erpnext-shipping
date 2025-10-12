@@ -57,17 +57,18 @@
    "label": "General Settings"
   },
   {
+   "default": "Label Printer",
    "description": "Choose which printer type will be used in printing labels: document printer (e.g. laser, inkjet) or label printer (e.g. Eltron, Zebra)",
    "fieldname": "printer_type",
    "fieldtype": "Select",
    "label": "Printer Type",
-   "options": "Document Printer\nLabel Printer"
+   "options": "Label Printer\nDocument Printer"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-30 09:35:34.852542",
+ "modified": "2025-04-15 06:29:58.994553",
  "modified_by": "Administrator",
  "module": "ERPNext Shipping",
  "name": "EasyPost",

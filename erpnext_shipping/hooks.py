@@ -207,7 +207,7 @@ doc_events = {
 	"Shipment": {
 		"validate": [
 			"erpnext_shipping.erpnext_shipping.utils.validate_parcels",
-			"erpnext_shipping.erpnext_shipping.utils.validate_phone",
+			"erpnext_shipping.erpnext_shipping.utils.validate_phone"
 		]
 	},
 }

@@ -298,11 +298,12 @@ def update_address(
 
 @frappe.whitelist()
 def validate_submission(shipment_name, address_name):
+	is_verification_enabled = frappe.db.get_single_value("Shipping Settings", "verify_address")
 	shipment = frappe.get_doc("Shipment", shipment_name).as_dict()
 	is_currency_set = frappe.db.get_single_value("Shipping Settings", "rates_currency")
 	has_parcel = len(shipment.shipment_parcel) != 0
 	is_single_parcel = len(shipment.shipment_parcel) <= 1
-	is_address_verified = frappe.db.get_value("Address", address_name, "is_verified")
+	is_address_verified = True if not is_verification_enabled else frappe.db.get_value("Address", address_name, "is_verified")
 	is_customs_items_fulfilled =  len(shipment.customs_items) and shipment.customs_signer and shipment.eel_pfc if check_if_international(shipment.delivery_address_name, shipment.pickup_address_name) else 1
 
 	error_list = []
