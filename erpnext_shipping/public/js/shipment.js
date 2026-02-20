@@ -5,7 +5,18 @@ frappe.ui.form.on("Shipment", {
 	refresh: function (frm) {
 		if (frm.doc.docstatus === 1 && !frm.doc.shipment_id) {
 			frm.add_custom_button(__("Fetch Shipping Rates"), function () {
-				return frm.events.fetch_shipping_rates(frm);
+				if (frm.doc.shipment_parcel.length > 1) {
+					frappe.confirm(
+						__(
+							"If your shipment contains packages with varying weights, the estimated shipping rates may differ from the final price charged by your carrier. Do you wish to proceed?"
+						),
+						function () {
+							frm.events.fetch_shipping_rates(frm);
+						}
+					);
+				} else {
+					frm.events.fetch_shipping_rates(frm);
+				}
 			});
 		}
 		if (frm.doc.shipment_id) {
@@ -116,10 +127,8 @@ frappe.ui.form.on("Shipment", {
 	},
 
 	update_tracking: function (frm, service_provider, shipment_id) {
-		let delivery_notes = [];
-		(frm.doc.shipment_delivery_note || []).forEach((d) => {
-			delivery_notes.push(d.delivery_note);
-		});
+		const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
+
 		frappe.call({
 			method: "erpnext_shipping.erpnext_shipping.shipping.update_tracking",
 			freeze: true,
@@ -164,10 +173,7 @@ function select_from_available_services(frm, available_services) {
 		],
 	});
 
-	let delivery_notes = [];
-	(frm.doc.shipment_delivery_note || []).forEach((d) => {
-		delivery_notes.push(d.delivery_note);
-	});
+	const delivery_notes = frm.doc.shipment_delivery_note.map((d) => d.delivery_note);
 
 	dialog.fields_dict.available_services.$wrapper.html(
 		frappe.render_template("shipment_service_selector", {
